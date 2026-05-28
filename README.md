@@ -5,7 +5,8 @@
 
 I wanted more control over what I could do with lobby management in Salesforce Scheduler, so I built my own LWC with more control that doesn't require any code changes. 
 
-<img width="2643" height="2395" alt="image" src="https://github.com/user-attachments/assets/fffc67e2-de84-43b1-bb25-f5997357b83c" />
+<img width="2663" height="2544" alt="image" src="https://github.com/user-attachments/assets/77433794-92f1-426b-b90c-73d1a58831e7" />
+
 
 
 ---
