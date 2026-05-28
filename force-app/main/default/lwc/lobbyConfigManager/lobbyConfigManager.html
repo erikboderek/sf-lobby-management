@@ -629,6 +629,19 @@
                         </div>
                         </template>
 
+                        <!-- New Contact Button Label -->
+                        <div class="config-field slds-m-bottom_medium">
+                            <lightning-input
+                                type="text"
+                                name="walkInNewContactLabel"
+                                label="New Contact Button Label"
+                                placeholder="Create New Customer"
+                                value={walkInNewContactLabel}
+                                onchange={handleWalkInNewContactLabelChange}>
+                            </lightning-input>
+                            <p class="config-field__help">Label on the button in the walk-in modal that creates a new contact record. Examples: <strong>Create New Customer</strong>, <strong>Add New Contact</strong>, <strong>New Citizen</strong>.</p>
+                        </div>
+
                         <!-- WL Target Lookup Field -->
                         <div class="config-field slds-m-bottom_medium">
                             <lightning-combobox

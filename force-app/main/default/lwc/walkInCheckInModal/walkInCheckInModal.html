@@ -6,7 +6,7 @@
             <!-- Modal Header -->
             <header class="slds-modal__header">
                 <button class="slds-button slds-button_icon slds-modal__close" title="Close" onclick={handleClose}>
-                    <lightning-icon icon-name="utility:close" alternative-text="Close" variant="inverse" size="small"></lightning-icon>
+                    <lightning-icon icon-name="utility:close" alternative-text="Close" size="small"></lightning-icon>
                     <span class="slds-assistive-text">Close</span>
                 </button>
                 <h2 class="slds-modal__title slds-hyphenate">
@@ -38,7 +38,7 @@
                         </div>
                         <div class="walk-in-new-btn-wrap">
                             <lightning-button
-                                label="Create New Citizen Record"
+                                label={newContactLabel}
                                 icon-name="utility:add"
                                 variant={newParticipantBtnVariant}
                                 onclick={handleNewParticipant}>

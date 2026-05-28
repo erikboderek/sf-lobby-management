@@ -15,8 +15,9 @@ const COLUMNS = [
 
 export default class WalkInCheckInModal extends LightningElement {
 
-    @api territoryId   = '';
-    @api territoryName = '';
+    @api territoryId      = '';
+    @api territoryName    = '';
+    @api newContactLabel  = 'Create New Customer';
 
     // ─── Screen routing ───────────────────────────────────────────────────────
     @track _screen = SCREEN_SEARCH;
@@ -87,8 +88,21 @@ export default class WalkInCheckInModal extends LightningElement {
         this._screen           = SCREEN_DETAILS;
     }
 
+    disconnectedCallback() {
+        clearTimeout(this._searchTimer);
+    }
+
     handleNextFromSearch() {
         if (this.nextDisabled) return;
+        if (!this._isNewParticipant) {
+            this._firstName  = '';
+            this._lastName   = '';
+            this._birthdate  = '';
+            this._street     = '';
+            this._city       = '';
+            this._province   = '';
+            this._postalCode = '';
+        }
         this._screen = SCREEN_DETAILS;
     }
 

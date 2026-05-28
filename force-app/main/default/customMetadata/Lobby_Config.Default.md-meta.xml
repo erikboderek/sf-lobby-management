@@ -50,4 +50,8 @@
         <field>Show_Metrics_By_Default__c</field>
         <value xsi:type="xsd:boolean">true</value>
     </values>
+    <values>
+        <field>Walk_In_New_Contact_Label__c</field>
+        <value xsi:type="xsd:string">Create New Customer</value>
+    </values>
 </CustomMetadata>

@@ -375,25 +375,36 @@ public with sharing class LobbyManagementController {
         }
 
         // ── Query 6: walk-in waitlist ──────────────────────────────────────────
+        // Scope mirrors getWaitlistParticipants exactly: Status IN (Waiting, Unassigned)
+        // within today's territory-aware day bounds. Without the CreatedDate window,
+        // months-old carry-over records inflate avgQueueWait to 400+ minutes.
         List<WaitlistParticipant> wlRecords = Database.query(
             'SELECT CreatedDate, Status' +
             ' FROM WaitlistParticipant' +
             ' WHERE Waitlist.ServiceTerritoryId = :safeId' +
-            '   AND Status = \'Waiting\'' +
+            '   AND Status IN (\'Waiting\', \'Unassigned\')' +
             '   AND CreatedDate >= :dayStart AND CreatedDate < :dayEnd' +
             ' WITH USER_MODE'
         );
         Integer wlWaiting    = wlRecords.size();
         Decimal avgQueueWait = 0;
         if (wlWaiting > 0) {
-            Long totalWaitMs = 0;
-            Long nowMs = Datetime.now().getTime();
+            Long    totalWaitMs = 0;
+            Long    nowMs       = Datetime.now().getTime();
+            Integer counted     = 0;
             for (WaitlistParticipant wp : wlRecords) {
                 if (wp.CreatedDate != null) {
                     totalWaitMs += nowMs - wp.CreatedDate.getTime();
+                    counted++;
                 }
             }
-            avgQueueWait = Decimal.valueOf(totalWaitMs) / wlWaiting / 60000;
+            // Divide by the number of records that actually contributed to totalWaitMs,
+            // not the total record count — guards against the denominator being inflated
+            // when any record has a null CreatedDate (system-guaranteed non-null in practice,
+            // but the existing null guard implies the case is possible).
+            avgQueueWait = counted > 0
+                ? Decimal.valueOf(totalWaitMs) / counted / 60000
+                : 0;
         }
 
         // ── Compute derived KPIs ───────────────────────────────────────────────
@@ -732,9 +743,16 @@ public with sharing class LobbyManagementController {
         }
 
         if (extraFields != null) {
+            // Allowlist: valid SOQL field tokens are [a-zA-Z_][a-zA-Z0-9_.]* only.
+            // escapeSingleQuotes is a no-op on field names and misses injection patterns
+            // like `Id,(SELECT Id FROM Children)` — the regex rejects them instead.
+            Pattern safeField = Pattern.compile('[a-zA-Z_][a-zA-Z0-9_.]*');
             for (String field : extraFields) {
-                if (String.isNotBlank(field) && field.trim().toLowerCase() != 'participant.name') {
-                    fieldSet.add(String.escapeSingleQuotes(field.trim()));
+                String f = field == null ? '' : field.trim();
+                if (String.isNotBlank(f)
+                        && f.toLowerCase() != 'participant.name'
+                        && safeField.matcher(f).matches()) {
+                    fieldSet.add(f);
                 }
             }
         }

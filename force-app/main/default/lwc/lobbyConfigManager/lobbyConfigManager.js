@@ -122,6 +122,7 @@ export default class LobbyConfigManager extends LightningElement {
     @track wlCustomActions = [];
     @track wlDefaultHiddenActions = [];
     @track waitlistFields = [];
+    @track walkInNewContactLabel = 'Create New Customer';
 
     // Form values — Status Mapping
     @track useCustomStatusMapping = false;
@@ -531,6 +532,7 @@ export default class LobbyConfigManager extends LightningElement {
                 this.waitlistFields         = cfg.Waitlist_Fields__c
                     ? parseComma(cfg.Waitlist_Fields__c)
                     : [...WL_DEFAULT_FIELDS];
+                this.walkInNewContactLabel  = cfg.Walk_In_New_Contact_Label__c ?? 'Create New Customer';
                 this.refreshInterval        = cfg.Refresh_Interval__c   ?? 30;
                 this.maxAppointments        = cfg.Max_Appointments__c   ?? 50;
                 this.enableMetrics          = cfg.Enable_Metrics__c     ?? false;
@@ -618,7 +620,8 @@ export default class LobbyConfigManager extends LightningElement {
     handleWlTargetLookupFieldChange(event){ this.wlTargetLookupField = event.detail.value; }
     handleWlCustomActionsChange(event)    { this.wlCustomActions = event.detail.value; }
     handleWlDefaultHiddenChange(event)    { this.wlDefaultHiddenActions = event.detail.value; }
-    handleWaitlistFieldsChange(event)     { this.waitlistFields = event.detail.value; }
+    handleWaitlistFieldsChange(event)          { this.waitlistFields = event.detail.value; }
+    handleWalkInNewContactLabelChange(event)   { this.walkInNewContactLabel = event.detail.value; }
 
     // ─── Handlers — Status Mapping ────────────────────────────────────────────
 
@@ -791,7 +794,8 @@ export default class LobbyConfigManager extends LightningElement {
             Metric_4_Ranges__c:            this.metric4Ranges.length ? JSON.stringify(this.metric4Ranges) : null,
             Metric_5_Ranges__c:            this.metric5Ranges.length ? JSON.stringify(this.metric5Ranges) : null,
             Metric_6_Ranges__c:            this.metric6Ranges.length ? JSON.stringify(this.metric6Ranges) : null,
-            Show_Metrics_By_Default__c:    this.showMetricsByDefault
+            Show_Metrics_By_Default__c:    this.showMetricsByDefault,
+            Walk_In_New_Contact_Label__c:  this.walkInNewContactLabel || 'Create New Customer'
         };
 
         try {

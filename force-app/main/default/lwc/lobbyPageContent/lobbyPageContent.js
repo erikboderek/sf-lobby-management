@@ -138,6 +138,7 @@ export default class LobbyPageContent extends NavigationMixin(LightningElement) 
     get _metricsBorderColor()       { return this._config?.Metrics_Border_Color__c || null; }
     get _showMetricsByDefault()     { return this._config?.Show_Metrics_By_Default__c ?? true; }
     get _checkInMethod()            { return this._config?.Check_In_Method__c ?? 'Custom LWC'; }
+    get _walkInNewContactLabel()    { return this._config?.Walk_In_New_Contact_Label__c ?? 'Create New Customer'; }
     get _selectedTerritoryName()    {
         const t = this.territories.find(t => t.value === this.selectedTerritoryId);
         return t ? t.label : '';
@@ -771,29 +772,31 @@ export default class LobbyPageContent extends NavigationMixin(LightningElement) 
             rec._checkinTime    = a.ActualStartTime
                 ? new Date(a.ActualStartTime).toLocaleTimeString([], timeFmt) : null;
 
-            // Checked-in: show real elapsed time since ActualStartTime.
-            // Otherwise: show scheduled duration as the EWT.
-            const ewt = this.ewtMap[rec.Id];
-            if (ewt != null) {
-                rec._waitMinutes = ewt;
-            } else if (rec._isCheckedIn && a.ActualStartTime) {
-                rec._waitMinutes = Math.max(0, Math.round(
-                    (Date.now() - new Date(a.ActualStartTime)) / 60000));
-            } else if (a.SchedStartTime && a.SchedEndTime) {
-                rec._waitMinutes = Math.max(0, Math.round(
-                    (new Date(a.SchedEndTime) - new Date(a.SchedStartTime)) / 60000));
+            // Status flags hoisted above wait-time block: _isCheckedIn is read below.
+            const ACTIVE_STATUSES   = ['In Progress', 'Checked_In'];
+            const COMPLETE_STATUSES = ['Completed', 'Cannot Complete', 'No-Show'];
+            rec._isCheckedIn    = ACTIVE_STATUSES.includes(rec.StatusCategory) || ACTIVE_STATUSES.includes(rec.Status);
+            rec._isComplete     = COMPLETE_STATUSES.includes(rec.StatusCategory) || COMPLETE_STATUSES.includes(rec.Status);
+            rec._showCheckin    = !rec._isCheckedIn && !rec._isComplete;
+
+            // Wait time only shown for checked-in appointments. The outer guard ensures
+            // even a server EWT value cannot produce a badge on Upcoming/Scheduled cards.
+            if (rec._isCheckedIn) {
+                const ewt = this.ewtMap[rec.Id];
+                if (ewt != null) {
+                    rec._waitMinutes = ewt;
+                } else if (a.ActualStartTime) {
+                    rec._waitMinutes = Math.max(0, Math.round(
+                        (Date.now() - new Date(a.ActualStartTime)) / 60000));
+                } else {
+                    rec._waitMinutes = null;
+                }
             } else {
                 rec._waitMinutes = null;
             }
             rec._waitDisplay    = rec._waitMinutes != null
                 ? this._formatWaitMinutes(rec._waitMinutes)
                 : null;
-
-            const ACTIVE_STATUSES   = ['In Progress', 'Checked_In'];
-            const COMPLETE_STATUSES = ['Completed', 'Cannot Complete', 'No-Show'];
-            rec._isCheckedIn    = ACTIVE_STATUSES.includes(rec.StatusCategory) || ACTIVE_STATUSES.includes(rec.Status);
-            rec._isComplete     = COMPLETE_STATUSES.includes(rec.StatusCategory) || COMPLETE_STATUSES.includes(rec.Status);
-            rec._showCheckin    = !rec._isCheckedIn && !rec._isComplete;
             rec._isLoading      = !!this.cardLoadingMap[rec.Id];
             rec._error          = this.cardErrorMap[rec.Id] ?? null;
             rec._extraFields    = this._extractExtraFields(a, extraFieldKeys);
@@ -848,14 +851,18 @@ export default class LobbyPageContent extends NavigationMixin(LightningElement) 
                 const handlingMins = (w.WorkType?.EstimatedDuration ?? DEFAULT_HANDLING_MINS);
                 waitMins = queueIndex * handlingMins;
             }
-            rec._waitMinutes    = waitMins;
+            // Show real EWT only when the server returns one (participant actively being served).
+            // Otherwise show queue position — informative without implying service has started.
+            rec._waitMinutes    = ewtWl != null ? ewtWl : null;
+            rec._waitDisplay    = ewtWl != null
+                ? this._formatWaitMinutes(ewtWl)
+                : (queueIndex === 0 ? 'Up next' : `#${queueIndex + 1} in queue`);
             rec._showCheckin    = w.Status === 'Waiting' || w.Status === 'Unassigned';
             rec._isLoading      = !!this.cardLoadingMap[w.Id];
             rec._error          = this.cardErrorMap[w.Id] ?? null;
             rec._extraFields    = this._extractExtraFields(w, extraFieldKeys);
             rec._hasExtraFields = rec._extraFields.length > 0;
             rec._targetId       = wlLookup ? (w[wlLookup] ?? null) : null;
-            rec._waitDisplay    = waitMins > 0 ? this._formatWaitMinutes(waitMins) : 'Just arrived';
             rec._participantName = w.Participant?.Name ?? null;
             rec._workTypeName   = w.WorkType?.Name ?? '';
             rec._displayStatus  = (w.Status || '').replace(/_/g, ' ');
@@ -975,8 +982,13 @@ export default class LobbyPageContent extends NavigationMixin(LightningElement) 
         const disp = slot.display;
 
         let displayValue;
-        if (disp === 'percentage') displayValue = `${Math.round(val)}%`;
-        else displayValue = raw.unit ? `${val}${raw.unit}` : String(val);
+        if (disp === 'percentage') {
+            displayValue = `${Math.round(val)}%`;
+        } else if (raw.unit === 'min' && val >= 60) {
+            displayValue = this._formatWaitMinutes(Math.round(val));
+        } else {
+            displayValue = raw.unit ? `${val}${raw.unit}` : String(val);
+        }
 
         const circ   = 2 * Math.PI * 40;
         const filled = (pct / 100) * circ;
@@ -1077,7 +1089,9 @@ export default class LobbyPageContent extends NavigationMixin(LightningElement) 
         if (mins >= 60) {
             const h = Math.floor(mins / 60);
             const m = mins % 60;
-            return m > 0 ? `${h}h ${m}m` : `${h}h`;
+            const hrLabel  = h === 1 ? 'hr'  : 'hrs';
+            const minLabel = m === 1 ? 'min' : 'mins';
+            return m > 0 ? `${h} ${hrLabel} ${m} ${minLabel}` : `${h} ${hrLabel}`;
         }
         return `${mins} min`;
     }
