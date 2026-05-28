@@ -1,17 +1,22 @@
 # Salesforce Lobby Management
 
-A Salesforce Field Service / Scheduler LWC dashboard that gives front-desk staff a real-time view of scheduled appointments and the walk-in waitlist for a selected service territory. An admin-facing configuration page controls all display and behavior settings with no code changes required.
+<img width="1000" height="564" alt="image" src="https://github.com/user-attachments/assets/c30666b8-5cd0-43a7-8d01-8c7cde53ddef" />
+
+
+I wanted more control over what I could do with lobby management in Salesforce Scheduler, so I built my own LWC with more control that doesn't require any code changes. 
+
+<img width="2643" height="2395" alt="image" src="https://github.com/user-attachments/assets/fffc67e2-de84-43b1-bb25-f5997357b83c" />
+
 
 ---
 
 ## Features
 
 - **Multi-territory selector** — switch between service territories; layout refreshes automatically
-- **Appointment cards** — configurable fields, status badges, EWT, per-card action menus (check in, reschedule, mark no-show, reassign resource)
+- **Appointment cards** — Appointments and Waitlist Participants have configurable fields, status badges, estimated wait times, per-card action menus (check in, reschedule, mark no-show, reassign resource)
 - **Walk-in waitlist** — add walk-ins via a built-in modal or a custom Screen Flow; sort participants, mark no-shows, remove resources
 - **Metrics carousel** — up to 6 KPI cards (total appointments, check-in rate, in-progress, avg wait, no-show rate, throughput, etc.) with configurable display types (number, %, bar, gauge, pie)
-- **Auto-refresh** — configurable polling interval (default 30 s)
-- **Custom status mapping** — map any SA picklist value to Current / Upcoming / Past / Missed buckets for dashboard card grouping
+- **Custom status mapping** — map any Service Appointment status picklist value to Current / Upcoming / Past / Missed buckets for dashboard card grouping
 - **Timezone-aware** — day boundaries computed from each territory's operating-hours timezone; no UTC drift
 - **Admin config app** — `Lobby Config` Lightning App with a dedicated config page; all settings stored in `Lobby_Config__mdt` custom metadata
 
@@ -25,7 +30,11 @@ A Salesforce Field Service / Scheduler LWC dashboard that gives front-desk staff
 |-------------|-------|
 | **Salesforce Scheduler** | The component queries `ServiceTerritory`, `ServiceAppointment`, `AssignedResource`, `WorkType` — all Scheduler standard objects |
 | **Field Service (FSL) managed package** | Required if using resource assignment features. The FSL trigger `FSL.TR001_Service_BeforeInsert` fires on every `ServiceAppointment` insert. |
-| **Waitlist feature enabled** | `WaitlistParticipant` and `Waitlist` objects must be available. Enable via **Setup → Salesforce Scheduler Settings → Enable Waitlist**. |
+| **Waitlist feature enabled** | `WaitlistParticipant` and `Waitlist` objects must be available. Enable via **Setup → Salesforce Scheduler Settings → Enable Drop In Appointments**. |
+| **Add "Checked In" status for Service Appointment** In Object Manager, Service Appointment. Fields and Relationships -> Status -> in Status Picklist Values, click New. Label: Checked In, API Name: Checked_In, Status Category: Checked In |
+| **Add "No-Show" status to Service Appointment** Similar to the last step, Label: No Show, API: No-Show, Status Category: Canceled |
+| **Add "At Branch" to Service Appointment** In Object Manager, Service Appointment. Fields and Relationships -> Appointment Type -> in Appointment Type Picklist Values, click New. Label: At Branch, API Name: At Branch
+**Note: The API Name must be "At Branch."** |
 | **Person Accounts enabled** | The built-in walk-in modal creates Person Accounts for new participants. Enable via **Setup → Account Settings → Allow Customer Support to enable Person Accounts**. |
 | **API Version 66+** | `sourceApiVersion` in `sfdx-project.json` is `66.0`. |
 | **Lightning Experience** | LWC only; Classic is not supported. |
@@ -102,31 +111,132 @@ Navigate to the **Lobby Management** Lightning App. Two tabs are included:
 
 All settings are stored in the `Lobby_Config__mdt` custom metadata type under the `Default` record. Changes made in the **Lobby Config** app tab are saved there immediately and take effect on the next dashboard page load.
 
-### Key settings
+### General
+In here, you can specify the refresh interval and the maximum number of appointments. Sorry, there's no paging capabilities at the moment. 
 
-| Setting | Description |
-|---------|-------------|
-| **Appointment Extra Fields** | SOQL API names of additional fields to display on each appointment card (e.g. `Description`, `WorkType.Name`) |
-| **Waitlist Extra Fields** | Same for waitlist participant cards |
-| **Check-In Method** | `Custom LWC` (built-in walk-in modal) or `Flow` (a named Screen Flow) |
-| **Waitlist Check-In Flow** | API name of the Screen Flow to launch when method = Flow |
-| **SA Custom Actions** | Quick Actions to add to the appointment card action menu |
-| **WL Custom Actions** | Quick Actions to add to the waitlist card action menu |
-| **Default Hidden Actions** | Built-in actions to hide from the default action menus |
-| **Custom Status Mapping** | Toggle on to map specific SA status API names to Current / Upcoming / Past / Missed buckets |
-| **Refresh Interval** | Auto-refresh polling interval in seconds (10–300) |
-| **Max Appointments** | Maximum SA records fetched per territory per load |
-| **Enable Metrics** | Toggle the KPI metrics carousel strip on/off |
-| **KPI Slots 1–6** | Choose KPI type and display style per carousel card |
+| **Custom Status Mapping** | Build out statuses on the LWC that align with your business processes. <img width="2595" height="1641" alt="image" src="https://github.com/user-attachments/assets/5868095e-e2eb-49c3-aa8d-0e0fda30b9e9" />
 
-### Walk-In Flow (optional)
+When custom status mapping is off, appointments are bucketed as follows:
 
-A sample Screen Flow (`Walk_In_Appointment`) is included. It accepts `serviceTerritoryId` and `serviceTerritoryName` input variables from the LWC, collects participant identity, and creates a `ServiceAppointment` + `WaitlistParticipant`. To use it:
+| Bucket   | Condition                                                                                      |
+|----------|------------------------------------------------------------------------------------------------|
+| Current  | Status is `Checked_In` or `In Progress` — OR — Status is `Scheduled` AND SchedStartTime ≤ now |
+| Upcoming | Status is `Scheduled` AND SchedStartTime > now                                                 |
+| Past     | NOT `Checked_In`/`In Progress` AND SchedStartTime < now (catches Completed, No-Show, Canceled) |
+| Missed   | Always empty — only populated when custom status mapping is enabled                            |
 
-1. Activate the flow in **Setup → Flows → Walk In Appointment**
-2. In Lobby Config, set **Check-In Method** to `Flow` and select `Walk In Appointment` from the flow picker
 
-> **Note:** The included flow sets `ServiceAppointment.ParentRecordId` to the participant's Account ID to satisfy the FSL before-insert trigger. If your org's FSL trigger requires a Work Order as `ParentRecordId`, modify the flow or `WalkInCheckInController.cls` accordingly.
+| **Metrics** | When enabled, can be toggled to display by default. If not, they can be toggled manually in the LWC by hitting the icon. 
+
+Up to six metrics can be displayed at once. Metrics displayed reflect data in the currently selected service territory.  Each one can be changed to be a different visual: number, percentage, bar, and gauge. Colors can be defined using hex code values. 
+
+You can preview metrics in the config page. 
+
+<img width="2621" height="3085" alt="image" src="https://github.com/user-attachments/assets/e238f768-100d-4dd6-9878-b5cede0672ea" />
+
+
+### Service Appointment
+| **Navigate To** | Pulls back a list of all lookup fields on a Service Appointment. This specifies which object you will go to upon clicking the appointment in the LWC. If nothing is selected, or the value is null, it'll default to the Service Appointment. 
+
+| **Actions** | Actions are configurable. Mirrors OOTB Lobby Management behavior.
+
+| **Extra Fields** | Specify what fields you want to display on the appointment in the LWC.
+
+<img width="2704" height="2224" alt="image" src="https://github.com/user-attachments/assets/d2b626ed-0251-4bcb-b569-9762fef60f41" />
+
+### Waitlist
+
+| **Walk-In Check-In Method** | Can specify if you want to use the included screens to search for a contact, or use your own. If you select to use your own, the LWC exports the selected Service Territory ID and name. Create inpute variables in your flow for serviceTerritoryId and serviceTerritoryName and build to your heart's content. Works with Screen Flows and auto-launched flows. 
+
+| **Navigate To** | Pulls back a list of all lookup fields on a Waitlist Participant. This specifies which object you will go to upon clicking the appointment in the LWC. If nothing is selected, or the value is null, it'll default to the Waitlist Participant. 
+
+| **Actions** | Actions are configurable. Mirrors OOTB Lobby Management behavior.
+
+
+---
+
+## Wait Time
+Wait time is displayed on these appointments in a few different ways. 
+
+### 1. Per-Appointment Card Estimated Wait Time
+*How long until a checked-in person is served*
+
+**Source:** `LobbyEwtController.getAppointmentEwt()`
+
+**Formula:**
+EWT = projectedEnd − now
+where projectedEnd = ActualStartTime + DurationInMinutes + BlockTimeAfterAppointment
+
+
+
+**Logic:**
+- Only applies to `Checked_In` appointments that have an assigned resource
+- Finds the `In Progress` appointment that resource is currently serving
+- Returns 0 if the blocking appointment has already passed its projected end
+- **Fallbacks (LWC-side):**
+  - If no server EWT: elapsed time since `ActualStartTime`
+  - If not yet checked in: scheduled duration (`SchedEndTime − SchedStartTime`)
+
+---
+
+### 2. Per-Waitlist-Card Estimated Wait Time
+*How long until a walk-in gets served*
+
+**Source:** `LobbyEwtController.getWaitlistEwt()`
+
+**Formula:**
+EWT = (queuePosition × avgHandlingTime) / activeCapacity
+
+
+
+| Variable | Source | Default |
+|----------|--------|---------|
+| `queuePosition` | Count of WaitlistParticipants with earlier `CreatedDate` on same waitlist | — |
+| `avgHandlingTime` | `AVG(WorkType.DurationInMinutes)` for WorkTypes linked to the waitlist | 20 min |
+| `activeCapacity` | Count of `WaitlistServiceResource` where `IsAvailable = true` | 1 |
+
+- **Fallback (LWC-side):** `queueIndex × WorkType.EstimatedDuration` (or 20 min default) if Apex returns nothing
+
+---
+
+### 3. `avg_queue_wait` Metric Card
+*Average time participants have already been waiting today*
+
+**Source:** `LobbyManagementController.getMetrics()`
+
+**Formula:**
+avg_queue_wait = SUM(now − CreatedDate for each Waiting participant) / count / 60,000
+
+
+
+**Logic:**
+- Measures **actual elapsed wait time**, not a prediction
+- Only counts `Waiting` participants created within the territory's day boundary
+- Displayed with unit `min`
+
+---
+
+### Key Differences
+
+| | What It Measures | Approach |
+|---|---|---|
+| Appointment EWT card | Predicted minutes until service starts | Current `In Progress` appointment's projected finish time |
+| Waitlist EWT card | Predicted minutes until walk-in is served | Queue position formula |
+| `avg_queue_wait` metric | Average time already spent waiting today | Simple elapsed time average |
+
+---
+
+### Display Format
+
+All wait times are formatted by `_formatWaitMinutes()` in `lobbyPageContent.js`:
+
+| Value | Display |
+|-------|---------|
+| < 60 min | `42 min` |
+| ≥ 60 min | `1h 30m` or `2h` |
+| Waitlist, just arrived | `Just arrived` |
+
+
 
 ---
 
