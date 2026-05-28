@@ -31,10 +31,9 @@ I wanted more control over what I could do with lobby management in Salesforce S
 | **Salesforce Scheduler** | The component queries `ServiceTerritory`, `ServiceAppointment`, `AssignedResource`, `WorkType` — all Scheduler standard objects |
 | **Field Service (FSL) managed package** | Required if using resource assignment features. The FSL trigger `FSL.TR001_Service_BeforeInsert` fires on every `ServiceAppointment` insert. |
 | **Waitlist feature enabled** | `WaitlistParticipant` and `Waitlist` objects must be available. Enable via **Setup → Salesforce Scheduler Settings → Enable Drop In Appointments**. |
-| **Add "Checked In" status for Service Appointment** In Object Manager, Service Appointment. Fields and Relationships -> Status -> in Status Picklist Values, click New. Label: Checked In, API Name: Checked_In, Status Category: Checked In |
-| **Add "No-Show" status to Service Appointment** Similar to the last step, Label: No Show, API: No-Show, Status Category: Canceled |
-| **Add "At Branch" to Service Appointment** In Object Manager, Service Appointment. Fields and Relationships -> Appointment Type -> in Appointment Type Picklist Values, click New. Label: At Branch, API Name: At Branch
-**Note: The API Name must be "At Branch."** |
+| **Add "Checked In" status to Service Appointment** | In Object Manager, Service Appointment. Fields and Relationships -> Status -> in Status Picklist Values, click New. Label: Checked In, API Name: Checked_In, Status Category: Checked In |
+| **Add "No-Show" status to Service Appointment** | Similar to the last step, Label: No Show, API: No-Show, Status Category: Canceled |
+| **Add "At Branch" Appointment Type to Service Appointment** | In Object Manager, Service Appointment. Fields and Relationships -> Appointment Type -> in Appointment Type Picklist Values, click New. Label: At Branch, API Name: At Branch *Note: The API Name must be "At Branch."* |
 | **Person Accounts enabled** | The built-in walk-in modal creates Person Accounts for new participants. Enable via **Setup → Account Settings → Allow Customer Support to enable Person Accounts**. |
 | **API Version 66+** | `sourceApiVersion` in `sfdx-project.json` is `66.0`. |
 | **Lightning Experience** | LWC only; Classic is not supported. |
@@ -111,47 +110,74 @@ Navigate to the **Lobby Management** Lightning App. Two tabs are included:
 
 All settings are stored in the `Lobby_Config__mdt` custom metadata type under the `Default` record. Changes made in the **Lobby Config** app tab are saved there immediately and take effect on the next dashboard page load.
 
-### General
-In here, you can specify the refresh interval and the maximum number of appointments. Sorry, there's no paging capabilities at the moment. 
+---
 
-| **Custom Status Mapping** | Build out statuses on the LWC that align with your business processes. <img width="2595" height="1641" alt="image" src="https://github.com/user-attachments/assets/5868095e-e2eb-49c3-aa8d-0e0fda30b9e9" />
+### General
+
+In here, you can specify the refresh interval and the maximum number of appointments. Sorry, there's no paging capabilities at the moment.
+
+---
+
+#### Custom Status Mapping
+
+Build out statuses on the LWC that align with your business processes.
+
+![Custom Status Mapping](https://github.com/user-attachments/assets/5868095e-e2eb-49c3-aa8d-0e0fda30b9e9)
 
 When custom status mapping is off, appointments are bucketed as follows:
 
-| Bucket   | Condition                                                                                      |
-|----------|------------------------------------------------------------------------------------------------|
-| Current  | Status is `Checked_In` or `In Progress` — OR — Status is `Scheduled` AND SchedStartTime ≤ now |
-| Upcoming | Status is `Scheduled` AND SchedStartTime > now                                                 |
-| Past     | NOT `Checked_In`/`In Progress` AND SchedStartTime < now (catches Completed, No-Show, Canceled) |
-| Missed   | Always empty — only populated when custom status mapping is enabled                            |
+| Bucket   | Condition                                                                                       |
+|----------|-------------------------------------------------------------------------------------------------|
+| Current  | Status is `Checked_In` or `In Progress` — OR — Status is `Scheduled` AND SchedStartTime ≤ now  |
+| Upcoming | Status is `Scheduled` AND SchedStartTime > now                                                  |
+| Past     | NOT `Checked_In`/`In Progress` AND SchedStartTime < now (catches Completed, No-Show, Canceled)  |
+| Missed   | Always empty — only populated when custom status mapping is enabled                             |
 
+---
 
-| **Metrics** | When enabled, can be toggled to display by default. If not, they can be toggled manually in the LWC by hitting the icon. 
+#### Metrics
 
-Up to six metrics can be displayed at once. Metrics displayed reflect data in the currently selected service territory.  Each one can be changed to be a different visual: number, percentage, bar, and gauge. Colors can be defined using hex code values. 
+When enabled, can be toggled to display by default. If not, they can be toggled manually in the LWC by hitting the icon.
 
-You can preview metrics in the config page. 
+Up to six metrics can be displayed at once. Metrics displayed reflect data in the currently selected service territory. Each one can be changed to be a different visual: number, percentage, bar, and gauge. Colors can be defined using hex code values.
 
-<img width="2621" height="3085" alt="image" src="https://github.com/user-attachments/assets/e238f768-100d-4dd6-9878-b5cede0672ea" />
+You can preview metrics in the config page.
 
+![Metrics](https://github.com/user-attachments/assets/e238f768-100d-4dd6-9878-b5cede0672ea)
+
+---
 
 ### Service Appointment
-| **Navigate To** | Pulls back a list of all lookup fields on a Service Appointment. This specifies which object you will go to upon clicking the appointment in the LWC. If nothing is selected, or the value is null, it'll default to the Service Appointment. 
 
-| **Actions** | Actions are configurable. Mirrors OOTB Lobby Management behavior.
+#### Navigate To
 
-| **Extra Fields** | Specify what fields you want to display on the appointment in the LWC.
+Pulls back a list of all lookup fields on a Service Appointment. This specifies which object you will go to upon clicking the appointment in the LWC. If nothing is selected, or the value is null, it'll default to the Service Appointment.
 
-<img width="2704" height="2224" alt="image" src="https://github.com/user-attachments/assets/d2b626ed-0251-4bcb-b569-9762fef60f41" />
+#### Actions
+
+Actions are configurable. Mirrors OOTB Lobby Management behavior.
+
+#### Extra Fields
+
+Specify what fields you want to display on the appointment in the LWC.
+
+![Service Appointment](https://github.com/user-attachments/assets/d2b626ed-0251-4bcb-b569-9762fef60f41)
+
+---
 
 ### Waitlist
 
-| **Walk-In Check-In Method** | Can specify if you want to use the included screens to search for a contact, or use your own. If you select to use your own, the LWC exports the selected Service Territory ID and name. Create inpute variables in your flow for serviceTerritoryId and serviceTerritoryName and build to your heart's content. Works with Screen Flows and auto-launched flows. 
+#### Walk-In Check-In Method
 
-| **Navigate To** | Pulls back a list of all lookup fields on a Waitlist Participant. This specifies which object you will go to upon clicking the appointment in the LWC. If nothing is selected, or the value is null, it'll default to the Waitlist Participant. 
+Can specify if you want to use the included screens to search for a contact, or use your own. If you select to use your own, the LWC exports the selected Service Territory ID and name. Create inpute variables in your flow for serviceTerritoryId and serviceTerritoryName and build to your heart's content. Works with Screen Flows and auto-launched flows.
 
-| **Actions** | Actions are configurable. Mirrors OOTB Lobby Management behavior.
+#### Navigate To
 
+Pulls back a list of all lookup fields on a Waitlist Participant. This specifies which object you will go to upon clicking the appointment in the LWC. If nothing is selected, or the value is null, it'll default to the Waitlist Participant.
+
+#### Actions
+
+Actions are configurable. Mirrors OOTB Lobby Management behavior.
 
 ---
 
