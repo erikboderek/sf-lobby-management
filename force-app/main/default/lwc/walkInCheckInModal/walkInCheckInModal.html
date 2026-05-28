@@ -1,0 +1,263 @@
+<template>
+    <section role="dialog" tabindex="-1" aria-modal="true" aria-label="Walk-In Check-In"
+             class="slds-modal slds-fade-in-open walk-in-modal">
+        <div class="slds-modal__container">
+
+            <!-- Modal Header -->
+            <header class="slds-modal__header">
+                <button class="slds-button slds-button_icon slds-modal__close" title="Close" onclick={handleClose}>
+                    <lightning-icon icon-name="utility:close" alternative-text="Close" variant="inverse" size="small"></lightning-icon>
+                    <span class="slds-assistive-text">Close</span>
+                </button>
+                <h2 class="slds-modal__title slds-hyphenate">
+                    <lightning-icon icon-name="standard:person_account" size="small"
+                        alternative-text="Walk-In" class="slds-m-right_x-small"></lightning-icon>
+                    Walk-In Check-In
+                    <template lwc:if={territoryName}>
+                        &nbsp;&mdash;&nbsp;{territoryName}
+                    </template>
+                </h2>
+            </header>
+
+            <!-- Modal Body -->
+            <div class="slds-modal__content slds-p-around_medium">
+
+                <!-- ── SCREEN 1: Search & Select ────────────────────────── -->
+                <template lwc:if={isSearch}>
+
+                    <!-- Search bar + Create New row -->
+                    <div class="walk-in-search-header slds-m-bottom_small">
+                        <div class="walk-in-search-row">
+                            <lightning-input
+                                type="search"
+                                label="Search by Name"
+                                placeholder="Start typing a name..."
+                                value={_searchTerm}
+                                onchange={handleSearchChange}>
+                            </lightning-input>
+                        </div>
+                        <div class="walk-in-new-btn-wrap">
+                            <lightning-button
+                                label="Create New Citizen Record"
+                                icon-name="utility:add"
+                                variant={newParticipantBtnVariant}
+                                onclick={handleNewParticipant}>
+                            </lightning-button>
+                            <template lwc:if={_isNewParticipant}>
+                                <span class="slds-m-top_xx-small slds-text-body_small slds-text-color_success walk-in-new-badge walk-in-new-badge--block">
+                                    New record will be created on submission.
+                                </span>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Searching spinner -->
+                    <template lwc:if={_isSearching}>
+                        <div class="walk-in-center slds-m-vertical_medium">
+                            <lightning-spinner size="small" alternative-text="Searching..."></lightning-spinner>
+                        </div>
+                    </template>
+
+                    <!-- Search error -->
+                    <template lwc:if={_searchError}>
+                        <p class="slds-text-color_error slds-text-body_small slds-m-bottom_small">{_searchError}</p>
+                    </template>
+
+                    <!-- Results table -->
+                    <template lwc:if={hasResults}>
+                        <lightning-datatable
+                            key-field="id"
+                            data={_searchResults}
+                            columns={columns}
+                            max-row-selection="1"
+                            selected-rows={_selectedRowIds}
+                            onrowselection={handleRowSelection}
+                            wrap-text-max-lines="2"
+                            class="walk-in-table">
+                        </lightning-datatable>
+                    </template>
+
+                    <!-- No results -->
+                    <template lwc:if={noResults}>
+                        <p class="slds-text-body_regular slds-text-color_weak slds-text-align_center slds-m-vertical_medium">
+                            No matching customers found.
+                        </p>
+                    </template>
+
+
+                </template>
+
+                <!-- ── SCREEN 2: Appointment Details ────────────────────── -->
+                <template lwc:if={isDetails}>
+
+                    <!-- Existing customer banner -->
+                    <template lwc:if={_selectedAccount}>
+                        <div class="slds-box slds-box_x-small slds-theme_shade slds-m-bottom_medium walk-in-existing-banner">
+                            <lightning-icon icon-name="utility:user" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                            <strong>{selectedName}</strong>
+                        </div>
+                    </template>
+
+                    <!-- New participant form -->
+                    <template lwc:if={_isNewParticipant}>
+                        <div class="config-subsection-header slds-m-bottom_small">
+                            <h3 class="config-subsection-title">New Participant Information</h3>
+                        </div>
+                        <div class="walk-in-two-col slds-m-bottom_medium">
+                            <div class="walk-in-two-col__item">
+                                <lightning-input
+                                    type="text"
+                                    label="First Name"
+                                    required
+                                    value={_firstName}
+                                    onchange={handleFirstNameChange}>
+                                </lightning-input>
+                            </div>
+                            <div class="walk-in-two-col__item">
+                                <lightning-input
+                                    type="text"
+                                    label="Last Name"
+                                    required
+                                    value={_lastName}
+                                    onchange={handleLastNameChange}>
+                                </lightning-input>
+                            </div>
+                            <div class="walk-in-two-col__item">
+                                <lightning-input
+                                    type="date"
+                                    label="Date of Birth"
+                                    value={_birthdate}
+                                    onchange={handleBirthdateChange}>
+                                </lightning-input>
+                            </div>
+                        </div>
+
+                        <div class="slds-m-bottom_medium">
+                            <lightning-input-address
+                                address-label="Mailing Address"
+                                street-label="Street"
+                                city-label="City"
+                                province-label="State/Province"
+                                postal-code-label="Zip/Postal Code"
+                                country-label="Country"
+                                street={_street}
+                                city={_city}
+                                province={_province}
+                                postal-code={_postalCode}
+                                country="US"
+                                show-address-lookup
+                                field-level-help="Mailing address for this participant"
+                                onchange={handleAddressChange}>
+                            </lightning-input-address>
+                        </div>
+                    </template>
+
+                    <!-- Appointment fields (shown for both new and existing) -->
+                    <div class="config-subsection-header slds-m-bottom_small">
+                        <h3 class="config-subsection-title">Appointment Details</h3>
+                    </div>
+
+                    <template lwc:if={_wtLoading}>
+                        <lightning-spinner size="small" alternative-text="Loading appointment types..."></lightning-spinner>
+                    </template>
+
+                    <template lwc:if={_wtError}>
+                        <p class="slds-text-color_error slds-text-body_small slds-m-bottom_small">{_wtError}</p>
+                    </template>
+
+                    <div class="slds-m-bottom_medium">
+                        <lightning-combobox
+                            name="workType"
+                            label="Appointment Type"
+                            placeholder="Select appointment type..."
+                            required
+                            options={_workTypeOptions}
+                            value={_workTypeId}
+                            onchange={handleWorkTypeChange}>
+                        </lightning-combobox>
+                    </div>
+
+                    <div class="slds-m-bottom_medium">
+                        <lightning-textarea
+                            name="notes"
+                            label="Notes"
+                            placeholder="Optional notes for this visit..."
+                            value={_notes}
+                            onchange={handleNotesChange}
+                            max-length="500">
+                        </lightning-textarea>
+                    </div>
+
+                    <!-- Save error -->
+                    <template lwc:if={_saveError}>
+                        <div class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_small" role="alert">
+                            <span class="slds-assistive-text">Error</span>
+                            <p class="slds-text-body_small">{_saveError}</p>
+                        </div>
+                    </template>
+
+                </template>
+
+                <!-- ── SCREEN 3: Success ─────────────────────────────────── -->
+                <template lwc:if={isSuccess}>
+                    <div class="walk-in-success">
+                        <div class="slds-illustration slds-illustration_small">
+                            <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg"
+                                 class="walk-in-success-svg" aria-hidden="true">
+                                <circle cx="200" cy="130" r="80" fill="var(--slds-g-color-success-container-1,#cdefc4)"></circle>
+                                <polyline points="165,130 190,155 235,108"
+                                    fill="none"
+                                    stroke="var(--slds-g-color-success-2,#2e844a)"
+                                    stroke-width="10"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                </polyline>
+                            </svg>
+                            <div class="slds-illustration__figure">
+                            </div>
+                            <div class="slds-illustration__body">
+                                <h3 class="slds-text-heading_medium slds-m-top_medium">Check-In Successful!</h3>
+                                <p class="slds-text-body_regular slds-text-color_weak slds-m-top_small">
+                                    The customer has been added to the waitlist and a service appointment has been created.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <footer class="slds-modal__footer">
+                <template lwc:if={isSearch}>
+                    <lightning-button label="Cancel" onclick={handleClose}></lightning-button>
+                    <lightning-button
+                        variant="brand"
+                        label="Next"
+                        disabled={nextDisabled}
+                        onclick={handleNextFromSearch}
+                        class="slds-m-left_small">
+                    </lightning-button>
+                </template>
+                <template lwc:if={isDetails}>
+                    <lightning-button label="Back" onclick={handleBackToSearch}></lightning-button>
+                    <lightning-button
+                        variant="brand"
+                        label="Check In"
+                        disabled={submitDisabled}
+                        onclick={handleSubmit}
+                        class="slds-m-left_small">
+                    </lightning-button>
+                    <template lwc:if={_isSaving}>
+                        <lightning-spinner size="small" alternative-text="Checking in..." class="walk-in-spinner-inline"></lightning-spinner>
+                    </template>
+                </template>
+                <template lwc:if={isSuccess}>
+                    <lightning-button variant="brand" label="Done" onclick={handleClose}></lightning-button>
+                </template>
+            </footer>
+
+        </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open"></div>
+</template>

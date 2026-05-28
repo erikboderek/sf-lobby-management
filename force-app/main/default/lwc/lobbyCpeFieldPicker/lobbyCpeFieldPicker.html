@@ -1,0 +1,19 @@
+<template>
+    <template lwc:if={isLoading}>
+        <lightning-spinner alternative-text="Loading fields" size="small"></lightning-spinner>
+    </template>
+    <template lwc:if={hasError}>
+        <p class="slds-text-color_error slds-text-body_small">{errorMessage}</p>
+    </template>
+    <template lwc:if={hasOptions}>
+        <lightning-dual-listbox
+            name="fields"
+            label={fieldLabel}
+            source-label="Available"
+            selected-label="Selected"
+            options={options}
+            value={selectedValues}
+            onchange={handleChange}
+        ></lightning-dual-listbox>
+    </template>
+</template>

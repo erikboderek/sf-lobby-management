@@ -1,0 +1,820 @@
+<template>
+    <template lwc:if={isLoading}>
+        <div class="lobby-loading-overlay">
+            <lightning-spinner alternative-text="Loading lobby data..." size="medium"></lightning-spinner>
+        </div>
+    </template>
+
+    <!-- ─── Page Header ─────────────────────────────────────────────────── -->
+    <div class="slds-page-header lobby-header">
+        <div class="slds-page-header__row">
+            <div class="slds-page-header__col-title">
+                <div class="slds-media slds-media_center">
+                    <div class="slds-media__figure">
+                        <lightning-icon icon-name="standard:service_appointment" size="medium" alternative-text="Lobby Management"></lightning-icon>
+                    </div>
+                    <div class="slds-media__body">
+                        <h1 class="slds-page-header__title">{pageTitle}</h1>
+                    </div>
+                </div>
+            </div>
+            <div class="slds-page-header__col-controls lobby-header-controls">
+                <div class="lobby-territory-control">
+                    <span class="lobby-territory-label">Service Territory</span>
+                    <lightning-combobox
+                        name="territory"
+                        label="Service Territory"
+                        variant="label-hidden"
+                        placeholder="Select a territory..."
+                        options={territories}
+                        value={selectedTerritoryId}
+                        onchange={handleTerritoryChange}>
+                    </lightning-combobox>
+                </div>
+                <template lwc:if={showMetricsStrip}>
+                    <button class="slds-button slds-button_icon slds-button_icon-border lobby-metrics-toggle" title={metricsToggleLabel} onclick={handleMetricsToggle} aria-pressed={metricsVisible}>
+                        <lightning-icon icon-name={metricsToggleIcon} size="x-small" alternative-text={metricsToggleLabel}></lightning-icon>
+                        <span class="slds-assistive-text">{metricsToggleLabel}</span>
+                    </button>
+                </template>
+                <div class="lobby-last-updated-wrap">
+                    <p class="lobby-last-updated slds-text-body_small slds-text-color_weak" aria-live="polite" aria-atomic="true">
+                        <template lwc:if={lastUpdated}>Last updated: {lastUpdated}</template>
+                    </p>
+                    <button class="slds-button slds-button_icon slds-button_icon-border lobby-refresh-btn" title="Refresh now" onclick={handleManualRefresh} aria-label="Refresh lobby data">
+                        <lightning-icon icon-name="utility:refresh" size="x-small" alternative-text="Refresh"></lightning-icon>
+                        <span class="slds-assistive-text">Refresh</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Metrics Loading Placeholder ─────────────────────────────────── -->
+    <template lwc:if={showMetricsLoading}>
+        <div class="metrics-strip metrics-strip--loading" aria-busy="true" aria-label="Loading metrics">
+            <lightning-spinner size="small" alternative-text="Loading metrics..."></lightning-spinner>
+        </div>
+    </template>
+
+    <!-- ─── Metrics Carousel ─────────────────────────────────────────────── -->
+    <template lwc:if={showMetrics}>
+        <div class="metrics-strip" aria-label="KPI Metrics">
+            <template lwc:if={hasPrevMetric}>
+                <button class="metrics-nav metrics-nav--prev" onclick={handleCarouselPrev} aria-label="Previous metrics" title="Previous">
+                    <lightning-icon icon-name="utility:chevronleft" size="x-small" alternative-text="Previous"></lightning-icon>
+                </button>
+            </template>
+
+            <div class="metrics-cards-row">
+                <template for:each={currentMetricCards} for:item="mc">
+                    <div key={mc._key} class="metrics-card" style={mc.cardStyle}>
+                        <!-- FIX 2: .metrics-visual is a flex-grow zone so the visual element
+                             always occupies the same vertical space regardless of type.
+                             .metrics-label and .metrics-context are pinned outside it,
+                             anchoring to the same baseline across all mixed card types. -->
+                        <div class="metrics-visual">
+                            <!-- Number / Percentage -->
+                            <template lwc:if={mc.isNumber}>
+                                <p class="metrics-value" style={mc.valueColorStyle}>{mc.value}</p>
+                            </template>
+                            <template lwc:if={mc.isPercentage}>
+                                <p class="metrics-value" style={mc.valueColorStyle}>{mc.value}</p>
+                                <div class="metrics-bar-wrap">
+                                    <div class="metrics-bar-track">
+                                        <div class="metrics-bar-fill" style={mc.barWidthStyle}></div>
+                                    </div>
+                                </div>
+                            </template>
+                            <!-- Bar -->
+                            <template lwc:if={mc.isBar}>
+                                <div class="metrics-bar-wrap">
+                                    <div class="metrics-bar-track">
+                                        <div class="metrics-bar-fill" style={mc.barWidthStyle}></div>
+                                    </div>
+                                    <p class="metrics-value metrics-value--bar">{mc.value}</p>
+                                </div>
+                            </template>
+                            <!-- Pie -->
+                            <template lwc:if={mc.isPie}>
+                                <div class="metrics-chart-wrap">
+                                    <svg viewBox="0 0 100 100" class="metrics-pie" aria-hidden="true">
+                                        <circle cx="50" cy="50" r="40" fill="var(--slds-g-color-border-1,#e8e8e8)"></circle>
+                                        <path d={mc.piePath} fill="var(--slds-g-color-brand-base-50,#0176d3)"></path>
+                                        <text x="50" y="56" text-anchor="middle" class="metrics-chart-text">{mc.pct}%</text>
+                                    </svg>
+                                </div>
+                            </template>
+                            <!-- Gauge -->
+                            <template lwc:if={mc.isGauge}>
+                                <div class="metrics-chart-wrap">
+                                    <svg class="metrics-gauge" viewBox="0 0 100 100" aria-hidden="true">
+                                        <circle class="metrics-gauge__track" cx="50" cy="50" r="40" fill="none" stroke-width="10"></circle>
+                                        <circle class="metrics-gauge__fill" cx="50" cy="50" r="40" fill="none" stroke-width="10"
+                                            stroke-dasharray={mc.gaugeDash}
+                                            stroke-linecap="round"
+                                            transform="rotate(-90 50 50)">
+                                        </circle>
+                                        <text class="metrics-chart-text" x="50" y="56" text-anchor="middle">{mc.value}</text>
+                                    </svg>
+                                </div>
+                            </template>
+                        </div>
+                        <p class="metrics-label">{mc.label}</p>
+                        <p class="metrics-context">{mc.context}</p>
+                    </div>
+                </template>
+            </div>
+
+            <template lwc:if={hasNextMetric}>
+                <button class="metrics-nav metrics-nav--next" onclick={handleCarouselNext} aria-label="Next metrics" title="Next">
+                    <lightning-icon icon-name="utility:chevronright" size="x-small" alternative-text="Next"></lightning-icon>
+                </button>
+            </template>
+
+            <template lwc:if={hasCarouselDots}>
+                <div class="metrics-dots" role="tablist" aria-label="Metric pages">
+                    <template for:each={carouselDots} for:item="dot">
+                        <button
+                            key={dot.index}
+                            class={dot.dotClass}
+                            data-index={dot.index}
+                            onclick={handleCarouselDot}
+                            role="tab"
+                            aria-selected={dot.isActive}
+                            aria-label="Metric {dot.index}">
+                        </button>
+                    </template>
+                </div>
+            </template>
+        </div>
+    </template>
+
+    <!-- ─── No Territories ──────────────────────────────────────────────── -->
+    <template lwc:if={hasNoTerritories}>
+        <div class="slds-illustration slds-illustration_small slds-m-around_large">
+            <div class="slds-illustration__message">
+                <h3 class="slds-text-heading_medium">No Service Territories Found</h3>
+                <p class="slds-text-body_regular slds-text-color_weak">Ensure at least one active Service Territory exists and you have access to it.</p>
+            </div>
+        </div>
+    </template>
+
+    <!-- ─── Main Dashboard ──────────────────────────────────────────────── -->
+    <template lwc:if={selectedTerritoryId}>
+        <div class="slds-grid slds-wrap slds-p-around_medium lobby-main-grid">
+
+            <!-- ── LEFT: Appointments (6/12) ───────────────────────────── -->
+            <section class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right_medium lobby-appt-col" aria-label="Scheduled Appointments">
+
+                <div class="lobby-appt-header slds-m-bottom_small">
+                    <div>
+                        <h2 class="slds-text-heading_small lobby-appt-title">Scheduled Service Appointments</h2>
+                        <p class="slds-text-body_small slds-text-color_weak">{appointments.length} Items &middot; Updated {lastUpdated}</p>
+                    </div>
+                </div>
+
+                <template lwc:if={apptError}>
+                    <div role="alert" class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_medium">
+                        <lightning-icon icon-name="utility:error" alternative-text="Error" variant="inverse" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                        <h2><strong>Error Loading Appointments:&nbsp;</strong>{apptError}</h2>
+                    </div>
+                </template>
+
+                <template lwc:if={hasNoAppointments}>
+                    <div class="slds-box slds-m-bottom_medium lobby-empty-state">
+                        <div class="slds-text-align_center slds-p-around_medium">
+                            <lightning-icon icon-name="utility:event" size="large" class="lobby-empty-icon slds-m-bottom_small"></lightning-icon>
+                            <h3 class="slds-text-heading_medium">No Appointments Today</h3>
+                            <p class="slds-text-body_regular slds-text-color_weak">Appointments will appear here as they are scheduled.</p>
+                        </div>
+                    </div>
+                </template>
+
+                <template lwc:if={hasAppointments}>
+                <lightning-accordion allow-multiple-sections-open active-section-name={defaultActiveSections}>
+
+                    <!-- Current -->
+                    <lightning-accordion-section name="current" label={currentSectionLabel}>
+                        <template for:each={currentAppointmentsEnriched} for:item="item">
+                            <article
+                                key={item.Id}
+                                class="appt-card slds-m-bottom_x-small"
+                                role="button"
+                                tabindex="0"
+                                data-id={item.Id}
+                                data-target-id={item._targetId}
+                                aria-label={item._ariaLabel}
+                                onclick={handleCardClick}
+                                onkeydown={handleCardKeydown}>
+                                <template lwc:if={item._isLoading}>
+                                    <div class="card-spinner-overlay">
+                                        <lightning-spinner size="small" alternative-text="Processing..."></lightning-spinner>
+                                    </div>
+                                </template>
+                                <!-- Card Body -->
+                                <div class="appt-card-body">
+                                    <div class="appt-card-main">
+                                        <p class="appt-name">{item._displayName}</p>
+                                        <p class="appt-subtitle">{item._workTypeName}&nbsp;&bull;&nbsp;{item.AppointmentNumber}</p>
+                                        <p class="appt-time">
+                                            <lightning-icon icon-name="utility:event" size="xx-small" class="appt-time-icon" alternative-text="Scheduled time"></lightning-icon>
+                                            &nbsp;{item._timeRange}
+                                        </p>
+                                        <template lwc:if={item._hasExtraFields}>
+                                            <dl class="appt-extra-fields">
+                                                <template for:each={item._extraFields} for:item="field">
+                                                    <dd key={field.label} class="appt-extra-value">{field.value}</dd>
+                                                </template>
+                                            </dl>
+                                        </template>
+                                    </div>
+                                    <div class="appt-card-aside">
+                                        <div class="slds-button-group" role="group">
+                                            <template lwc:if={item._showCheckin}>
+                                                <lightning-button label="Check In" variant="neutral" data-id={item.Id} onclick={handleCheckIn}></lightning-button>
+                                            </template>
+                                            <template lwc:if={item._hasMenu}>
+                                                <div class="appt-dropdown-wrap">
+                                                    <button class="slds-button slds-button_icon slds-button_icon-border-filled appt-split-caret" title="More options" data-id={item.Id} onclick={handleDropdownToggle} aria-haspopup="true">
+                                                        <lightning-icon icon-name="utility:down" size="xx-small" alternative-text="More options"></lightning-icon>
+                                                    </button>
+                                                    <template lwc:if={item._isDropdownOpen}>
+                                                        <div class="slds-dropdown slds-dropdown_right appt-dropdown" role="menu">
+                                                            <ul class="dropdown__list" role="presentation">
+                                                                <template for:each={item._menuItems} for:item="menuItem">
+                                                                    <li key={menuItem.value} class="slds-dropdown__item" role="presentation">
+                                                                        <a role="menuitem" tabindex="0" data-id={item.Id} data-action={menuItem.value} onclick={handleDropdownAction}>
+                                                                            <span class="slds-truncate">{menuItem.label}</span>
+                                                                        </a>
+                                                                    </li>
+                                                                </template>
+                                                            </ul>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Card Footer -->
+                                <div class="appt-card-footer">
+                                    <div class="appt-footer-left">
+                                        <template lwc:if={item._checkinTime}>
+                                            <lightning-icon icon-name="utility:check" size="xx-small" class="appt-footer-icon appt-footer-icon--success" alternative-text="Checked in"></lightning-icon>
+                                            <span class="appt-footer-checkin">Check-In Time: {item._checkinTime}</span>
+                                            <lightning-badge label={item._displayStatus} class={item._badgeClass}></lightning-badge>
+                                        </template>
+                                        <template lwc:if={item._showCheckin}>
+                                            <lightning-icon icon-name="utility:ban" size="xx-small" class="appt-footer-icon" alternative-text="Not checked in"></lightning-icon>
+                                            <span class="appt-footer-noshow">Not yet checked in</span>
+                                        </template>
+                                    </div>
+                                    <template lwc:if={item._waitDisplay}>
+                                        <div class="appt-footer-right">
+                                            <lightning-icon icon-name="utility:clock" size="xx-small" class="appt-footer-icon appt-footer-icon--wait" alternative-text="Wait time"></lightning-icon>
+                                            <span class="appt-footer-wait">Wait Time: {item._waitDisplay}</span>
+                                        </div>
+                                    </template>
+                                </div>
+                                <template lwc:if={item._error}>
+                                    <div role="alert" class="slds-notify slds-notify_alert slds-alert_error slds-m-top_small">
+                                        <h2><strong>Error:&nbsp;</strong>{item._error}</h2>
+                                    </div>
+                                </template>
+                            </article>
+                        </template>
+                        <template lwc:if={hasNoCurrentAppointments}>
+                            <p class="slds-text-body_regular slds-text-color_weak slds-p-around_small">No customers currently being served.</p>
+                        </template>
+                    </lightning-accordion-section>
+
+                    <!-- Upcoming -->
+                    <lightning-accordion-section name="upcoming" label={upcomingSectionLabel}>
+                        <template for:each={upcomingAppointmentsEnriched} for:item="item">
+                            <article
+                                key={item.Id}
+                                class="appt-card slds-m-bottom_x-small"
+                                role="button"
+                                tabindex="0"
+                                data-id={item.Id}
+                                data-target-id={item._targetId}
+                                aria-label={item._ariaLabel}
+                                onclick={handleCardClick}
+                                onkeydown={handleCardKeydown}>
+                                <template lwc:if={item._isLoading}>
+                                    <div class="card-spinner-overlay">
+                                        <lightning-spinner size="small" alternative-text="Processing..."></lightning-spinner>
+                                    </div>
+                                </template>
+                                <div class="appt-card-body">
+                                    <div class="appt-card-main">
+                                        <p class="appt-name">{item._displayName}</p>
+                                        <p class="appt-subtitle">{item._workTypeName}&nbsp;&bull;&nbsp;{item.AppointmentNumber}</p>
+                                        <p class="appt-time">
+                                            <lightning-icon icon-name="utility:event" size="xx-small" class="appt-time-icon" alternative-text="Scheduled time"></lightning-icon>
+                                            &nbsp;{item._timeRange}
+                                        </p>
+                                        <template lwc:if={item._hasExtraFields}>
+                                            <dl class="appt-extra-fields">
+                                                <template for:each={item._extraFields} for:item="field">
+                                                    <dd key={field.label} class="appt-extra-value">{field.value}</dd>
+                                                </template>
+                                            </dl>
+                                        </template>
+                                    </div>
+                                    <div class="appt-card-aside">
+                                        <div class="slds-button-group" role="group">
+                                            <template lwc:if={item._showCheckin}>
+                                                <lightning-button label="Check In" variant="neutral" data-id={item.Id} onclick={handleCheckIn}></lightning-button>
+                                            </template>
+                                            <template lwc:if={item._hasMenu}>
+                                                <div class="appt-dropdown-wrap">
+                                                    <button class="slds-button slds-button_icon slds-button_icon-border-filled appt-split-caret" title="More options" data-id={item.Id} onclick={handleDropdownToggle} aria-haspopup="true">
+                                                        <lightning-icon icon-name="utility:down" size="xx-small" alternative-text="More options"></lightning-icon>
+                                                    </button>
+                                                    <template lwc:if={item._isDropdownOpen}>
+                                                        <div class="slds-dropdown slds-dropdown_right appt-dropdown" role="menu">
+                                                            <ul class="dropdown__list" role="presentation">
+                                                                <template for:each={item._menuItems} for:item="menuItem">
+                                                                    <li key={menuItem.value} class="slds-dropdown__item" role="presentation">
+                                                                        <a role="menuitem" tabindex="0" data-id={item.Id} data-action={menuItem.value} onclick={handleDropdownAction}>
+                                                                            <span class="slds-truncate">{menuItem.label}</span>
+                                                                        </a>
+                                                                    </li>
+                                                                </template>
+                                                            </ul>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="appt-card-footer">
+                                    <div class="appt-footer-left">
+                                        <lightning-icon icon-name="utility:ban" size="xx-small" class="appt-footer-icon" alternative-text="Not checked in"></lightning-icon>
+                                        <span class="appt-footer-noshow">Not yet checked in</span>
+                                    </div>
+                                    <template lwc:if={item._waitDisplay}>
+                                        <div class="appt-footer-right">
+                                            <lightning-icon icon-name="utility:clock" size="xx-small" class="appt-footer-icon appt-footer-icon--wait" alternative-text="Wait time"></lightning-icon>
+                                            <span class="appt-footer-wait">Wait Time: {item._waitDisplay}</span>
+                                        </div>
+                                    </template>
+                                </div>
+                                <template lwc:if={item._error}>
+                                    <div role="alert" class="slds-notify slds-notify_alert slds-alert_error slds-m-top_small">
+                                        <h2><strong>Error:&nbsp;</strong>{item._error}</h2>
+                                    </div>
+                                </template>
+                            </article>
+                        </template>
+                        <template lwc:if={hasNoUpcomingAppointments}>
+                            <p class="slds-text-body_regular slds-text-color_weak slds-p-around_small">No upcoming appointments.</p>
+                        </template>
+                    </lightning-accordion-section>
+
+                    <!-- Past -->
+                    <lightning-accordion-section name="past" label={pastSectionLabel}>
+                        <template for:each={pastAppointmentsEnriched} for:item="item">
+                            <article
+                                key={item.Id}
+                                class="appt-card slds-m-bottom_x-small"
+                                role="button"
+                                tabindex="0"
+                                data-id={item.Id}
+                                data-target-id={item._targetId}
+                                aria-label={item._ariaLabel}
+                                onclick={handleCardClick}
+                                onkeydown={handleCardKeydown}>
+                                <div class="appt-card-body">
+                                    <div class="appt-card-main">
+                                        <p class="appt-name">{item._displayName}</p>
+                                        <p class="appt-subtitle">{item._workTypeName}&nbsp;&bull;&nbsp;{item.AppointmentNumber}</p>
+                                        <p class="appt-time">
+                                            <lightning-icon icon-name="utility:event" size="xx-small" class="appt-time-icon" alternative-text="Scheduled time"></lightning-icon>
+                                            &nbsp;{item._timeRange}
+                                        </p>
+                                        <template lwc:if={item._hasExtraFields}>
+                                            <dl class="appt-extra-fields">
+                                                <template for:each={item._extraFields} for:item="field">
+                                                    <dd key={field.label} class="appt-extra-value">{field.value}</dd>
+                                                </template>
+                                            </dl>
+                                        </template>
+                                    </div>
+                                    <div class="appt-card-aside">
+                                        <div class="slds-button-group" role="group">
+                                            <template lwc:if={item._hasMenu}>
+                                                <div class="appt-dropdown-wrap">
+                                                    <button class="slds-button slds-button_icon slds-button_icon-border-filled appt-split-caret" title="More options" data-id={item.Id} onclick={handleDropdownToggle} aria-haspopup="true">
+                                                        <lightning-icon icon-name="utility:down" size="xx-small" alternative-text="More options"></lightning-icon>
+                                                    </button>
+                                                    <template lwc:if={item._isDropdownOpen}>
+                                                        <div class="slds-dropdown slds-dropdown_right appt-dropdown" role="menu">
+                                                            <ul class="dropdown__list" role="presentation">
+                                                                <template for:each={item._menuItems} for:item="menuItem">
+                                                                    <li key={menuItem.value} class="slds-dropdown__item" role="presentation">
+                                                                        <a role="menuitem" tabindex="0" data-id={item.Id} data-action={menuItem.value} onclick={handleDropdownAction}>
+                                                                            <span class="slds-truncate">{menuItem.label}</span>
+                                                                        </a>
+                                                                    </li>
+                                                                </template>
+                                                            </ul>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <lightning-badge label={item._displayStatus} class={item._badgeClass}></lightning-badge>
+                                    </div>
+                                </div>
+                                <div class="appt-card-footer">
+                                    <div class="appt-footer-left">
+                                        <template lwc:if={item._checkinTime}>
+                                            <lightning-icon icon-name="utility:check" size="xx-small" class="appt-footer-icon appt-footer-icon--success" alternative-text="Check-in time"></lightning-icon>
+                                            <span class="appt-footer-checkin">Check-In Time: {item._checkinTime}</span>
+                                            <lightning-badge label={item._displayStatus} class={item._badgeClass}></lightning-badge>
+                                        </template>
+                                    </div>
+                                    <template lwc:if={item._waitDisplay}>
+                                        <div class="appt-footer-right">
+                                            <lightning-icon icon-name="utility:clock" size="xx-small" class="appt-footer-icon appt-footer-icon--wait" alternative-text="Wait time"></lightning-icon>
+                                            <span class="appt-footer-wait">Wait Time: {item._waitDisplay}</span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </article>
+                        </template>
+                        <template lwc:if={hasNoPastAppointments}>
+                            <p class="slds-text-body_regular slds-text-color_weak slds-p-around_small">No past appointments.</p>
+                        </template>
+                    </lightning-accordion-section>
+
+                    <!-- Missed -->
+                    <template lwc:if={showMissedSection}>
+                        <lightning-accordion-section name="missed" label={missedSectionLabel}>
+                            <template for:each={missedAppointmentsEnriched} for:item="item">
+                                <article
+                                    key={item.Id}
+                                    class="appt-card slds-m-bottom_x-small"
+                                    role="button"
+                                    tabindex="0"
+                                    data-id={item.Id}
+                                    data-target-id={item._targetId}
+                                    aria-label={item._ariaLabel}
+                                    onclick={handleCardClick}
+                                    onkeydown={handleCardKeydown}>
+                                    <div class="appt-card-body">
+                                        <div class="appt-card-main">
+                                            <p class="appt-name">{item._displayName}</p>
+                                            <p class="appt-subtitle">{item._workTypeName}&nbsp;&bull;&nbsp;{item.AppointmentNumber}</p>
+                                            <p class="appt-time">
+                                                <lightning-icon icon-name="utility:event" size="xx-small" class="appt-time-icon" alternative-text="Scheduled time"></lightning-icon>
+                                                &nbsp;{item._timeRange}
+                                            </p>
+                                            <template lwc:if={item._hasExtraFields}>
+                                                <dl class="appt-extra-fields">
+                                                    <template for:each={item._extraFields} for:item="field">
+                                                        <dd key={field.label} class="appt-extra-value">{field.value}</dd>
+                                                    </template>
+                                                </dl>
+                                            </template>
+                                        </div>
+                                        <div class="appt-card-aside">
+                                            <div class="slds-button-group" role="group">
+                                                <template lwc:if={item._hasMenu}>
+                                                    <div class="appt-dropdown-wrap">
+                                                        <button class="slds-button slds-button_icon slds-button_icon-border-filled appt-split-caret" title="More options" data-id={item.Id} onclick={handleDropdownToggle} aria-haspopup="true">
+                                                            <lightning-icon icon-name="utility:down" size="xx-small" alternative-text="More options"></lightning-icon>
+                                                        </button>
+                                                        <template lwc:if={item._isDropdownOpen}>
+                                                            <div class="slds-dropdown slds-dropdown_right appt-dropdown" role="menu">
+                                                                <ul class="dropdown__list" role="presentation">
+                                                                    <template for:each={item._menuItems} for:item="menuItem">
+                                                                        <li key={menuItem.value} class="slds-dropdown__item" role="presentation">
+                                                                            <a role="menuitem" tabindex="0" data-id={item.Id} data-action={menuItem.value} onclick={handleDropdownAction}>
+                                                                                <span class="slds-truncate">{menuItem.label}</span>
+                                                                            </a>
+                                                                        </li>
+                                                                    </template>
+                                                                </ul>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <lightning-badge label={item._displayStatus} class={item._badgeClass}></lightning-badge>
+                                        </div>
+                                    </div>
+                                    <div class="appt-card-footer">
+                                        <div class="appt-footer-left">
+                                            <lightning-icon icon-name="utility:ban" size="xx-small" class="appt-footer-icon appt-footer-icon--error" alternative-text="Missed"></lightning-icon>
+                                            <span class="appt-footer-noshow">{item._displayStatus}</span>
+                                        </div>
+                                    </div>
+                                </article>
+                            </template>
+                            <template lwc:if={hasNoMissedAppointments}>
+                                <p class="slds-text-body_regular slds-text-color_weak slds-p-around_small">No missed appointments.</p>
+                            </template>
+                        </lightning-accordion-section>
+                    </template>
+
+                </lightning-accordion>
+                </template>
+            </section>
+
+            <!-- ── RIGHT: Waitlist (6/12) ───────────────────────────────── -->
+            <aside class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right_medium lobby-waitlist-col" aria-label="Walk-In Waitlist">
+
+                <div class="lobby-appt-header slds-m-bottom_small">
+                    <div>
+                        <h2 class="slds-text-heading_small lobby-appt-title">Walk-In Waitlist</h2>
+                        <p class="slds-text-body_small slds-text-color_weak">{waitlistCount} Items &middot; Updated {lastUpdated}</p>
+                    </div>
+                    <lightning-button label="Check In Walk-In" variant="brand" icon-name="utility:add" onclick={handleGlobalWaitlistCheckin} title="Start a new walk-in check-in"></lightning-button>
+                </div>
+
+                <template lwc:if={waitlistError}>
+                    <div role="alert" class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_medium">
+                        <lightning-icon icon-name="utility:error" alternative-text="Error" variant="inverse" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                        <h2><strong>Error Loading Waitlist:&nbsp;</strong>{waitlistError}</h2>
+                    </div>
+                </template>
+
+                <template lwc:if={hasNoWaitlist}>
+                    <div class="slds-box slds-m-bottom_medium lobby-empty-state">
+                        <div class="slds-text-align_center slds-p-around_medium">
+                            <lightning-icon icon-name="utility:groups" size="large" class="lobby-empty-icon slds-m-bottom_small"></lightning-icon>
+                            <h3 class="slds-text-heading_medium">No One Waiting</h3>
+                            <p class="slds-text-body_regular slds-text-color_weak">Walk-ins will appear here as they join the queue.</p>
+                        </div>
+                    </div>
+                </template>
+
+                <template for:each={enrichedWaitlist} for:item="item">
+                    <article
+                        key={item.Id}
+                        class="appt-card slds-m-bottom_x-small"
+                        role="button"
+                        tabindex="0"
+                        data-id={item.Id}
+                        data-target-id={item._targetId}
+                        aria-label={item._ariaLabel}
+                        onclick={handleWaitlistCardClick}
+                        onkeydown={handleWaitlistCardKeydown}>
+                        <template lwc:if={item._isLoading}>
+                            <div class="card-spinner-overlay">
+                                <lightning-spinner size="small" alternative-text="Processing..."></lightning-spinner>
+                            </div>
+                        </template>
+                        <!-- Card Body -->
+                        <div class="appt-card-body">
+                            <div class="appt-card-main">
+                                <p class="appt-name">{item._participantName}</p>
+                                <p class="appt-subtitle">{item._workTypeName}&nbsp;&bull;&nbsp;{item.ParticipantIdentifier}</p>
+                                <template lwc:if={item._hasExtraFields}>
+                                    <dl class="appt-extra-fields">
+                                        <template for:each={item._extraFields} for:item="field">
+                                            <dd key={field.label} class="appt-extra-value">{field.value}</dd>
+                                        </template>
+                                    </dl>
+                                </template>
+                            </div>
+                            <div class="appt-card-aside">
+                                <div class="slds-button-group" role="group">
+                                    <template lwc:if={item._hasMenu}>
+                                        <div class="appt-dropdown-wrap">
+                                            <button class="slds-button slds-button_icon slds-button_icon-border-filled appt-split-caret" title="More options" data-id={item.Id} onclick={handleDropdownToggle} aria-haspopup="true">
+                                                <lightning-icon icon-name="utility:down" size="xx-small" alternative-text="More options"></lightning-icon>
+                                            </button>
+                                            <template lwc:if={item._isDropdownOpen}>
+                                                <div class="slds-dropdown slds-dropdown_right appt-dropdown" role="menu">
+                                                    <ul class="dropdown__list" role="presentation">
+                                                        <template for:each={item._menuItems} for:item="menuItem">
+                                                            <li key={menuItem.value} class="slds-dropdown__item" role="presentation">
+                                                                <a role="menuitem" tabindex="0" data-id={item.Id} data-action={menuItem.value} onclick={handleDropdownAction}>
+                                                                    <span class="slds-truncate">{menuItem.label}</span>
+                                                                </a>
+                                                            </li>
+                                                        </template>
+                                                    </ul>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Card Footer -->
+                        <div class="appt-card-footer">
+                            <div class="appt-footer-left">
+                                <lightning-icon icon-name="utility:queue" size="xx-small" class="appt-footer-icon" alternative-text="Queued"></lightning-icon>
+                                <span class="appt-footer-noshow">{item._displayStatus}</span>
+                            </div>
+                            <template lwc:if={item._waitDisplay}>
+                                <div class="appt-footer-right">
+                                    <lightning-icon icon-name="utility:clock" size="xx-small" class="appt-footer-icon appt-footer-icon--wait" alternative-text="Wait time"></lightning-icon>
+                                    <span class="appt-footer-wait">Wait: {item._waitDisplay}</span>
+                                </div>
+                            </template>
+                        </div>
+                        <template lwc:if={item._error}>
+                            <div role="alert" class="slds-notify slds-notify_alert slds-alert_error slds-m-top_small">
+                                <h2><strong>Error:&nbsp;</strong>{item._error}</h2>
+                            </div>
+                        </template>
+                    </article>
+                </template>
+
+            </aside>
+
+        </div>
+    </template>
+
+    <!-- ─── Reschedule Modal ─────────────────────────────────────────────── -->
+    <template lwc:if={showRescheduleModal}>
+        <section role="dialog" tabindex="-1" aria-modal="true" aria-label="Reschedule Appointment" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container lobby-action-modal">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close" title="Close" onclick={handleRescheduleClose}>
+                        <lightning-icon icon-name="utility:close" alternative-text="Close" variant="inverse" size="small"></lightning-icon>
+                    </button>
+                    <h2 class="slds-modal__title">Reschedule Appointment</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <template lwc:if={_rescheduleError}>
+                        <div role="alert" class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_small">
+                            <p>{_rescheduleError}</p>
+                        </div>
+                    </template>
+                    <template lwc:if={_rescheduleSlotsLoading}>
+                        <div class="slds-text-align_center slds-p-around_medium">
+                            <lightning-spinner size="small" alternative-text="Loading slots..."></lightning-spinner>
+                        </div>
+                    </template>
+                    <template lwc:if={rescheduleHasSlots}>
+                        <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_small">Select a new time slot (next 2 business days):</p>
+                        <div class="action-slot-grid">
+                            <template for:each={rescheduleSlotOptions} for:item="slot">
+                                <button
+                                    key={slot.startIso}
+                                    class={slot.slotClass}
+                                    data-start={slot.startIso}
+                                    data-end={slot.endIso}
+                                    onclick={handleRescheduleSlotSelect}>
+                                    {slot.label}
+                                </button>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button label="Cancel" onclick={handleRescheduleClose}></lightning-button>
+                    <lightning-button
+                        variant="brand"
+                        label="Confirm Reschedule"
+                        disabled={rescheduleConfirmDisabled}
+                        onclick={handleRescheduleConfirm}
+                        class="slds-m-left_small">
+                    </lightning-button>
+                    <template lwc:if={_rescheduleSaving}>
+                        <lightning-spinner size="small" alternative-text="Saving..." class="walk-in-spinner-inline"></lightning-spinner>
+                    </template>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+    <!-- ─── No Show Modal ────────────────────────────────────────────────── -->
+    <template lwc:if={showNoShowModal}>
+        <section role="dialog" tabindex="-1" aria-modal="true" aria-label="Mark as No Show" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container lobby-action-modal">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close" title="Close" onclick={handleNoShowClose}>
+                        <lightning-icon icon-name="utility:close" alternative-text="Close" variant="inverse" size="small"></lightning-icon>
+                    </button>
+                    <h2 class="slds-modal__title">Mark as No Show</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <template lwc:if={_noShowError}>
+                        <div role="alert" class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_small">
+                            <p>{_noShowError}</p>
+                        </div>
+                    </template>
+                    <p class="slds-text-body_regular slds-m-bottom_medium">This will set the appointment status to <strong>No Show</strong>.</p>
+                    <lightning-textarea
+                        label="Service Note"
+                        placeholder="Optional note about this no-show..."
+                        value={_noShowNote}
+                        max-length="1000"
+                        onchange={handleNoShowNoteChange}>
+                    </lightning-textarea>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button label="Cancel" onclick={handleNoShowClose}></lightning-button>
+                    <lightning-button
+                        variant="destructive"
+                        label="Mark No Show"
+                        disabled={_noShowSaving}
+                        onclick={handleNoShowConfirm}
+                        class="slds-m-left_small">
+                    </lightning-button>
+                    <template lwc:if={_noShowSaving}>
+                        <lightning-spinner size="small" alternative-text="Saving..." class="walk-in-spinner-inline"></lightning-spinner>
+                    </template>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+    <!-- ─── Reassign Modal ───────────────────────────────────────────────── -->
+    <template lwc:if={showReassignModal}>
+        <section role="dialog" tabindex="-1" aria-modal="true" aria-label="Reassign Service Resource" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container lobby-action-modal">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close" title="Close" onclick={handleReassignClose}>
+                        <lightning-icon icon-name="utility:close" alternative-text="Close" variant="inverse" size="small"></lightning-icon>
+                    </button>
+                    <h2 class="slds-modal__title">Reassign Service Resource</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <template lwc:if={_reassignError}>
+                        <div role="alert" class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_small">
+                            <p>{_reassignError}</p>
+                        </div>
+                    </template>
+                    <template lwc:if={_reassignResourcesLoading}>
+                        <div class="slds-text-align_center slds-p-around_medium">
+                            <lightning-spinner size="small" alternative-text="Loading resources..."></lightning-spinner>
+                        </div>
+                    </template>
+                    <template lwc:if={hasReassignResources}>
+                        <lightning-combobox
+                            name="resource"
+                            label="Service Resource"
+                            placeholder="Select a resource..."
+                            options={_reassignResources}
+                            value={_reassignSelectedId}
+                            onchange={handleReassignResourceChange}>
+                        </lightning-combobox>
+                    </template>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button label="Cancel" onclick={handleReassignClose}></lightning-button>
+                    <lightning-button
+                        variant="brand"
+                        label="Reassign"
+                        disabled={reassignConfirmDisabled}
+                        onclick={handleReassignConfirm}
+                        class="slds-m-left_small">
+                    </lightning-button>
+                    <template lwc:if={_reassignSaving}>
+                        <lightning-spinner size="small" alternative-text="Saving..." class="walk-in-spinner-inline"></lightning-spinner>
+                    </template>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+    <!-- ─── Flow Modal ──────────────────────────────────────────────────── -->
+    <template lwc:if={showWalkInModal}>
+        <c-walk-in-check-in-modal
+            territory-id={selectedTerritoryId}
+            territory-name={_selectedTerritoryName}
+            oncheckinclose={handleWalkInClose}>
+        </c-walk-in-check-in-modal>
+    </template>
+
+    <template lwc:if={showFlowModal}>
+        <section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="flow-modal-heading" class="slds-modal slds-fade-in-open lobby-checkin-modal">
+            <div class="slds-modal__container lobby-checkin-modal-container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close" title="Close" onclick={closeFlowModal}>
+                        <lightning-icon icon-name="utility:close" alternative-text="Close" variant="inverse" size="small"></lightning-icon>
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 id="flow-modal-heading" class="slds-modal__title">Action</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <template lwc:if={modalFlowError}>
+                        <div role="alert" class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_medium">
+                            <h2><strong>Flow Error:&nbsp;</strong>{modalFlowError}</h2>
+                        </div>
+                    </template>
+                    <lightning-flow flow-api-name={flowModalApiName} flow-input-variables={flowInputVariables} onstatuschange={handleFlowStatusChange}></lightning-flow>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button label="Cancel" variant="neutral" onclick={closeFlowModal}></lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+</template>

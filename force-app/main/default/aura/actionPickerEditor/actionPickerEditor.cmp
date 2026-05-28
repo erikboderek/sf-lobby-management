@@ -1,0 +1,40 @@
+<!--
+    Custom Attribute Editor for App Builder.
+
+    Registered via the `type` attribute on the parent component's .design file
+    using the <design:attributeType> / dependentAttributeValues pattern.
+    This pattern is the App Builder analogue of Flow Builder's configurationEditor.
+
+    Receives the current property value through the v.value attribute and persists
+    changes by calling the parent's notifyPropertyUpdate() via the designActionManager.
+
+    Inner LWC (actionPickerDualList) owns the Apex call and dual-listbox rendering.
+    This Aura wrapper owns App Builder integration (notifyPropertyUpdate, value init).
+-->
+<aura:component implements="force:appHostable" access="global">
+
+    <!-- Property being edited — set by App Builder via the editor binding -->
+    <aura:attribute name="value"         type="String" default="" />
+
+    <!-- Passed through to the inner LWC for Apex parameterization -->
+    <aura:attribute name="objectApiName" type="String" default="ServiceAppointment" />
+
+    <!-- Column labels forwarded to the dual-listbox -->
+    <aura:attribute name="sourceLabel"   type="String" default="Available" />
+    <aura:attribute name="selectedLabel" type="String" default="Selected" />
+    <aura:attribute name="fieldLabel"    type="String" default="Quick Actions" />
+
+    <!-- App Builder design attribute manager injected by the platform -->
+    <aura:attribute name="designAttributeManager" type="Aura.Action" />
+
+    <div class="slds-p-around_medium">
+        <c:actionPickerDualList
+            objectApiName="{!v.objectApiName}"
+            selectedValue="{!v.value}"
+            sourceLabel="{!v.sourceLabel}"
+            selectedLabel="{!v.selectedLabel}"
+            fieldLabel="{!v.fieldLabel}"
+            onvaluechange="{!c.handleValueChange}" />
+    </div>
+
+</aura:component>

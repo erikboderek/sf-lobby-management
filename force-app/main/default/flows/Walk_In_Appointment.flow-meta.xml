@@ -1,0 +1,601 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <description>Walk-in customer check-in flow. Accepts serviceTerritoryId and serviceTerritoryName from the lobby LWC. Collects participant identity and visit purpose, then creates a ServiceAppointment (Status=None, no resource assigned) and a WaitlistParticipant (Status=Unassigned). FIFO/Round Robin resource assignment is handled downstream by the Salesforce Scheduler engine.</description>
+    <interviewLabel>Walk In Appointment {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Walk In Appointment</label>
+    <processType>Flow</processType>
+    <runInMode>DefaultMode</runInMode>
+    <start>
+        <locationX>176</locationX>
+        <locationY>50</locationY>
+        <connector>
+            <targetReference>Screen_WalkInCheckIn</targetReference>
+        </connector>
+    </start>
+    <status>Active</status>
+
+    <!-- ── ASSIGNMENTS ────────────────────────────────────────────── -->
+
+    <assignments>
+        <description>Existing-participant path: copies the Account lookup value into v_ParticipantId. If the Account lookup was left blank, the downstream decision will override this with the Contact ID.</description>
+        <name>Assignment_SetParticipantId_FromAccount</name>
+        <label>Set Participant ID — Existing Account</label>
+        <locationX>176</locationX>
+        <locationY>470</locationY>
+        <assignmentItems>
+            <assignToReference>v_ParticipantId</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>lookup_ExistingAccount</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Decision_UseContactIfNoAccount</targetReference>
+        </connector>
+    </assignments>
+
+    <assignments>
+        <description>Existing-participant fallback: no Account was selected, so use the Contact lookup value as the participant ID.</description>
+        <name>Assignment_SetParticipantId_FromContact</name>
+        <label>Set Participant ID — Contact Fallback</label>
+        <locationX>176</locationX>
+        <locationY>710</locationY>
+        <assignmentItems>
+            <assignToReference>v_ParticipantId</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>lookup_ExistingContact</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>GetRecords_ActiveWaitlist</targetReference>
+        </connector>
+    </assignments>
+
+    <assignments>
+        <description>New-participant path: stores the ID of the newly created Person Account as the participant ID so all downstream steps reference a single variable.</description>
+        <name>Assignment_SetParticipantId_FromNewAccount</name>
+        <label>Set Participant ID — New Person Account</label>
+        <locationX>400</locationX>
+        <locationY>590</locationY>
+        <assignmentItems>
+            <assignToReference>v_ParticipantId</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>CreateRecord_NewPersonAccount</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>GetRecords_ActiveWaitlist</targetReference>
+        </connector>
+    </assignments>
+
+    <assignments>
+        <description>Stores the auto-generated ServiceAppointment ID for use as ServiceAppointmentId on the WaitlistParticipant record.</description>
+        <name>Assignment_SetServiceAppointmentId</name>
+        <label>Store New Service Appointment ID</label>
+        <locationX>176</locationX>
+        <locationY>1190</locationY>
+        <assignmentItems>
+            <assignToReference>v_ServiceAppointmentId</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>CreateRecord_ServiceAppointment</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>CreateRecord_WaitlistParticipant</targetReference>
+        </connector>
+    </assignments>
+
+    <!-- ── CHOICES ────────────────────────────────────────────────── -->
+
+    <choices>
+        <description>Radio button: the walk-in customer is already in Salesforce. Shows the Account and Contact lookup fields.</description>
+        <name>choice_ExistingParticipant</name>
+        <choiceText>Existing Participant</choiceText>
+        <dataType>String</dataType>
+        <value>
+            <stringValue>Existing</stringValue>
+        </value>
+    </choices>
+
+    <choices>
+        <description>Radio button: the walk-in customer is new. Shows the name, phone, and email entry fields and triggers Person Account creation.</description>
+        <name>choice_NewParticipant</name>
+        <choiceText>New Participant</choiceText>
+        <dataType>String</dataType>
+        <value>
+            <stringValue>New</stringValue>
+        </value>
+    </choices>
+
+    <!-- ── DECISIONS ──────────────────────────────────────────────── -->
+
+    <decisions>
+        <description>Routes the flow based on the Account Status radio selection. New participants proceed to Person Account creation; existing participants proceed to the lookup assignment path.</description>
+        <name>Decision_NewOrExistingParticipant</name>
+        <label>New or Existing Participant?</label>
+        <locationX>176</locationX>
+        <locationY>350</locationY>
+        <defaultConnector>
+            <targetReference>Assignment_SetParticipantId_FromAccount</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Existing Participant</defaultConnectorLabel>
+        <rules>
+            <name>outcome_NewParticipant</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>radio_AccountStatus</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>New</stringValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>GetRecords_PersonAccountRecordType</targetReference>
+            </connector>
+            <label>New Participant — Create Person Account</label>
+        </rules>
+    </decisions>
+
+    <decisions>
+        <description>After setting v_ParticipantId from the Account lookup, checks whether it is populated. If blank (no Account selected), falls back to the Contact lookup value.</description>
+        <name>Decision_UseContactIfNoAccount</name>
+        <label>Was an Account Selected?</label>
+        <locationX>176</locationX>
+        <locationY>590</locationY>
+        <defaultConnector>
+            <targetReference>Assignment_SetParticipantId_FromContact</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>No — Use Contact ID Instead</defaultConnectorLabel>
+        <rules>
+            <name>outcome_AccountSelected</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>v_ParticipantId</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>GetRecords_ActiveWaitlist</targetReference>
+            </connector>
+            <label>Yes — Account ID is Set</label>
+        </rules>
+    </decisions>
+
+    <!-- ── DYNAMIC CHOICE SETS ────────────────────────────────────── -->
+
+    <dynamicChoiceSets>
+        <description>Populates the Reason for Visit dropdown with WorkTypes available at this specific Service Territory. Queries the ServiceTerritoryWorkType junction object (filtered by serviceTerritoryId) because WorkType has no direct ServiceTerritoryId field. Displays the related WorkType name; the stored value is WorkTypeId.</description>
+        <name>rcs_TerritoryWorkTypes</name>
+        <dataType>String</dataType>
+        <displayField>WorkType.Name</displayField>
+        <filters>
+            <field>ServiceTerritoryId</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>serviceTerritoryId</elementReference>
+            </value>
+        </filters>
+        <object>ServiceTerritoryWorkType</object>
+        <valueField>WorkTypeId</valueField>
+    </dynamicChoiceSets>
+
+    <!-- ── RECORD CREATES ─────────────────────────────────────────── -->
+
+    <recordCreates>
+        <description>Creates a new Person Account for the first-time walk-in customer using the name and contact details entered on the screen. RecordTypeId is set to the Person Account type so this is not created as a business account. The record ID is automatically stored in {!CreateRecord_NewPersonAccount}.</description>
+        <name>CreateRecord_NewPersonAccount</name>
+        <label>Create New Person Account for Walk-In Customer</label>
+        <locationX>400</locationX>
+        <locationY>470</locationY>
+        <connector>
+            <targetReference>Assignment_SetParticipantId_FromNewAccount</targetReference>
+        </connector>
+        <inputAssignments>
+            <field>RecordTypeId</field>
+            <value>
+                <elementReference>v_PersonAccountRecordTypeId</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>FirstName</field>
+            <value>
+                <elementReference>input_FirstName</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>LastName</field>
+            <value>
+                <elementReference>input_LastName</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Phone</field>
+            <value>
+                <elementReference>input_Phone</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>PersonEmail</field>
+            <value>
+                <elementReference>input_Email</elementReference>
+            </value>
+        </inputAssignments>
+        <object>Account</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordCreates>
+
+    <recordCreates>
+        <description>Creates a ServiceAppointment for this walk-in visit. Status=None (unscheduled walk-in). No ServiceResource is assigned — FIFO/Round Robin assignment is performed downstream by the Salesforce Scheduler engine. The record ID is automatically stored in {!CreateRecord_ServiceAppointment}.</description>
+        <name>CreateRecord_ServiceAppointment</name>
+        <label>Create Walk-In Service Appointment</label>
+        <locationX>176</locationX>
+        <locationY>1070</locationY>
+        <connector>
+            <targetReference>Assignment_SetServiceAppointmentId</targetReference>
+        </connector>
+        <inputAssignments>
+            <field>Status</field>
+            <value>
+                <stringValue>None</stringValue>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>ParentRecordId</field>
+            <value>
+                <elementReference>v_ParticipantId</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>WorkTypeId</field>
+            <value>
+                <elementReference>picklist_ReasonForVisit</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>ServiceTerritoryId</field>
+            <value>
+                <elementReference>serviceTerritoryId</elementReference>
+            </value>
+        </inputAssignments>
+        <object>ServiceAppointment</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordCreates>
+
+    <recordCreates>
+        <description>Creates the WaitlistParticipant record linking the customer to the active Waitlist for this territory. Status=Unassigned. Links to the ServiceAppointment created in the prior step so the full Salesforce Scheduler operational engine functions correctly for status tracking, handling time, and resource assignment.</description>
+        <name>CreateRecord_WaitlistParticipant</name>
+        <label>Create Waitlist Participant Record</label>
+        <locationX>176</locationX>
+        <locationY>1310</locationY>
+        <inputAssignments>
+            <field>ParticipantId</field>
+            <value>
+                <elementReference>v_ParticipantId</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>WaitlistId</field>
+            <value>
+                <elementReference>v_WaitlistId</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>ServiceAppointmentId</field>
+            <value>
+                <elementReference>v_ServiceAppointmentId</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>WorkTypeId</field>
+            <value>
+                <elementReference>picklist_ReasonForVisit</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Description</field>
+            <value>
+                <elementReference>textarea_Description</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Status</field>
+            <value>
+                <stringValue>Unassigned</stringValue>
+            </value>
+        </inputAssignments>
+        <object>WaitlistParticipant</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordCreates>
+
+    <!-- ── RECORD LOOKUPS ─────────────────────────────────────────── -->
+
+    <recordLookups>
+        <description>Retrieves the RecordType ID for Person Accounts (DeveloperName=PersonAccount, SobjectType=Account) so the new Account is created as a Person Account rather than a business account. ID is stored directly in v_PersonAccountRecordTypeId.</description>
+        <name>GetRecords_PersonAccountRecordType</name>
+        <label>Get Person Account Record Type ID</label>
+        <locationX>400</locationX>
+        <locationY>350</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>CreateRecord_NewPersonAccount</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>DeveloperName</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>PersonAccount</stringValue>
+            </value>
+        </filters>
+        <filters>
+            <field>SobjectType</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>Account</stringValue>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <object>RecordType</object>
+        <outputAssignments>
+            <assignToReference>v_PersonAccountRecordTypeId</assignToReference>
+            <field>Id</field>
+        </outputAssignments>
+    </recordLookups>
+
+    <recordLookups>
+        <description>Retrieves the single active Waitlist record for this Service Territory. Per the architectural constraint, exactly one active Waitlist exists per territory. The Waitlist ID is stored directly in v_WaitlistId.</description>
+        <name>GetRecords_ActiveWaitlist</name>
+        <label>Get Active Waitlist for This Service Territory</label>
+        <locationX>176</locationX>
+        <locationY>830</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>CreateRecord_ServiceAppointment</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>ServiceTerritoryId</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>serviceTerritoryId</elementReference>
+            </value>
+        </filters>
+        <filters>
+            <field>IsActive</field>
+            <operator>EqualTo</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <object>Waitlist</object>
+        <outputAssignments>
+            <assignToReference>v_WaitlistId</assignToReference>
+            <field>Id</field>
+        </outputAssignments>
+    </recordLookups>
+
+    <!-- ── SCREENS ────────────────────────────────────────────────── -->
+
+    <screens>
+        <description>The single check-in screen. Shows a dynamic territory-name header, account-status radio buttons, conditional lookup or new-entry fields, and visit details.</description>
+        <name>Screen_WalkInCheckIn</name>
+        <label>Walk-In Check In</label>
+        <locationX>176</locationX>
+        <locationY>170</locationY>
+        <allowBack>false</allowBack>
+        <allowFinish>true</allowFinish>
+        <allowPause>false</allowPause>
+        <showFooter>true</showFooter>
+        <showHeader>false</showHeader>
+        <connector>
+            <targetReference>Decision_NewOrExistingParticipant</targetReference>
+        </connector>
+
+        <fields>
+            <name>display_ScreenHeader</name>
+            <fieldText>&lt;h1 style=&quot;font-size:1.5em;font-weight:600;margin-bottom:0.5rem;&quot;&gt;Check In — {!serviceTerritoryName}&lt;/h1&gt;</fieldText>
+            <fieldType>DisplayText</fieldType>
+        </fields>
+
+        <fields>
+            <name>radio_AccountStatus</name>
+            <choiceReferences>choice_ExistingParticipant</choiceReferences>
+            <choiceReferences>choice_NewParticipant</choiceReferences>
+            <dataType>String</dataType>
+            <defaultSelectedChoiceReference>choice_ExistingParticipant</defaultSelectedChoiceReference>
+            <fieldText>Account Status</fieldText>
+            <fieldType>RadioButtons</fieldType>
+            <isRequired>true</isRequired>
+        </fields>
+
+        <fields>
+            <name>lookup_ExistingAccount</name>
+            <dataType>String</dataType>
+            <fieldText>Existing Account ID</fieldText>
+            <fieldType>InputField</fieldType>
+            <isRequired>false</isRequired>
+            <visibilityRule>
+                <conditionLogic>and</conditionLogic>
+                <conditions>
+                    <leftValueReference>radio_AccountStatus</leftValueReference>
+                    <operator>EqualTo</operator>
+                    <rightValue>
+                        <stringValue>Existing</stringValue>
+                    </rightValue>
+                </conditions>
+            </visibilityRule>
+        </fields>
+
+        <fields>
+            <name>lookup_ExistingContact</name>
+            <dataType>String</dataType>
+            <fieldText>Existing Contact ID (if no Account)</fieldText>
+            <fieldType>InputField</fieldType>
+            <isRequired>false</isRequired>
+            <visibilityRule>
+                <conditionLogic>and</conditionLogic>
+                <conditions>
+                    <leftValueReference>radio_AccountStatus</leftValueReference>
+                    <operator>EqualTo</operator>
+                    <rightValue>
+                        <stringValue>Existing</stringValue>
+                    </rightValue>
+                </conditions>
+            </visibilityRule>
+        </fields>
+
+        <fields>
+            <name>input_FirstName</name>
+            <dataType>String</dataType>
+            <fieldText>First Name</fieldText>
+            <fieldType>InputField</fieldType>
+            <isRequired>true</isRequired>
+            <visibilityRule>
+                <conditionLogic>and</conditionLogic>
+                <conditions>
+                    <leftValueReference>radio_AccountStatus</leftValueReference>
+                    <operator>EqualTo</operator>
+                    <rightValue>
+                        <stringValue>New</stringValue>
+                    </rightValue>
+                </conditions>
+            </visibilityRule>
+        </fields>
+
+        <fields>
+            <name>input_LastName</name>
+            <dataType>String</dataType>
+            <fieldText>Last Name</fieldText>
+            <fieldType>InputField</fieldType>
+            <isRequired>true</isRequired>
+            <visibilityRule>
+                <conditionLogic>and</conditionLogic>
+                <conditions>
+                    <leftValueReference>radio_AccountStatus</leftValueReference>
+                    <operator>EqualTo</operator>
+                    <rightValue>
+                        <stringValue>New</stringValue>
+                    </rightValue>
+                </conditions>
+            </visibilityRule>
+        </fields>
+
+        <fields>
+            <name>input_Phone</name>
+            <dataType>String</dataType>
+            <fieldText>Contact Number / Phone</fieldText>
+            <fieldType>InputField</fieldType>
+            <isRequired>true</isRequired>
+            <visibilityRule>
+                <conditionLogic>and</conditionLogic>
+                <conditions>
+                    <leftValueReference>radio_AccountStatus</leftValueReference>
+                    <operator>EqualTo</operator>
+                    <rightValue>
+                        <stringValue>New</stringValue>
+                    </rightValue>
+                </conditions>
+            </visibilityRule>
+        </fields>
+
+        <fields>
+            <name>input_Email</name>
+            <dataType>String</dataType>
+            <fieldText>Email (Optional)</fieldText>
+            <fieldType>InputField</fieldType>
+            <isRequired>false</isRequired>
+            <visibilityRule>
+                <conditionLogic>and</conditionLogic>
+                <conditions>
+                    <leftValueReference>radio_AccountStatus</leftValueReference>
+                    <operator>EqualTo</operator>
+                    <rightValue>
+                        <stringValue>New</stringValue>
+                    </rightValue>
+                </conditions>
+            </visibilityRule>
+        </fields>
+
+        <fields>
+            <name>picklist_ReasonForVisit</name>
+            <choiceReferences>rcs_TerritoryWorkTypes</choiceReferences>
+            <dataType>String</dataType>
+            <fieldText>Reason for Visit</fieldText>
+            <fieldType>DropdownBox</fieldType>
+            <isRequired>true</isRequired>
+        </fields>
+
+        <fields>
+            <name>textarea_Description</name>
+            <dataType>String</dataType>
+            <fieldText>Description (Optional)</fieldText>
+            <fieldType>LargeTextArea</fieldType>
+            <isRequired>false</isRequired>
+        </fields>
+
+    </screens>
+
+    <!-- ── VARIABLES ──────────────────────────────────────────────── -->
+
+    <variables>
+        <description>The Salesforce ID of the Service Territory for this check-in. Passed in by the lobby LWC. Used to filter the WorkType picklist and to locate the active Waitlist.</description>
+        <name>serviceTerritoryId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+
+    <variables>
+        <description>The display name of the Service Territory. Passed in by the lobby LWC. Shown in the screen header so the clerk knows which location they are checking the customer into.</description>
+        <name>serviceTerritoryName</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+
+    <variables>
+        <description>The Account or Contact ID of the walk-in participant — either looked up (existing) or auto-populated from the newly created Person Account. Used as ParentRecordId on the ServiceAppointment and as ParticipantId on the WaitlistParticipant.</description>
+        <name>v_ParticipantId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+
+    <variables>
+        <description>The RecordType ID for Person Accounts. Retrieved by GetRecords_PersonAccountRecordType and used on the new Account record to ensure it is created as a Person Account.</description>
+        <name>v_PersonAccountRecordTypeId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+
+    <variables>
+        <description>The ID of the single active Waitlist for this Service Territory. Retrieved by GetRecords_ActiveWaitlist and used as WaitlistId on the new WaitlistParticipant record.</description>
+        <name>v_WaitlistId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+
+    <variables>
+        <description>The ID of the ServiceAppointment created for this walk-in visit. Stored after the create step and linked on the WaitlistParticipant record so the Salesforce Scheduler engine can track this visit end-to-end.</description>
+        <name>v_ServiceAppointmentId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+
+</Flow>

@@ -1,0 +1,21 @@
+<template>
+    <template lwc:if={isLoading}>
+        <lightning-spinner alternative-text="Loading flows" size="small"></lightning-spinner>
+    </template>
+    <template lwc:if={hasError}>
+        <p class="slds-text-color_error slds-text-body_small">{errorMessage}</p>
+    </template>
+    <template lwc:if={hasOptions}>
+        <lightning-combobox
+            name="flow"
+            label="Check-In Flow"
+            placeholder="Select a Screen Flow..."
+            options={options}
+            value={value}
+            onchange={handleChange}
+        ></lightning-combobox>
+    </template>
+    <template lwc:if={isEmpty}>
+        <p class="slds-text-body_small slds-text-color_weak">No active Screen Flows found.</p>
+    </template>
+</template>

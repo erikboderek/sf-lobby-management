@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Default</label>
+    <protected>false</protected>
+    <values>
+        <field>SA_Custom_Actions__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>SA_Hidden_Default_Actions__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>WL_Custom_Actions__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>WL_Hidden_Default_Actions__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>Waitlist_Checkin_Flow__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>Target_Lookup_Field__c</field>
+        <value xsi:type="xsd:string">Case__c</value>
+    </values>
+    <values>
+        <field>Waitlist_Fields__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>Appointment_Fields__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>Refresh_Interval__c</field>
+        <value xsi:type="xsd:double">30</value>
+    </values>
+    <values>
+        <field>Max_Appointments__c</field>
+        <value xsi:type="xsd:double">50</value>
+    </values>
+    <values>
+        <field>Use_Custom_Status_Mapping__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>Show_Metrics_By_Default__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+</CustomMetadata>

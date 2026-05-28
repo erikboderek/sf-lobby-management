@@ -1,0 +1,34 @@
+<template>
+    <div class="slds-form slds-form_stacked slds-p-around_small">
+
+        <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_small">
+            Action, field, and flow configuration is managed in the
+            <strong>Lobby Config</strong> app.
+        </p>
+
+        <div class="slds-form-element slds-m-bottom_small">
+            <lightning-input
+                type="number"
+                name="refreshIntervalSeconds"
+                label="Refresh Interval (seconds)"
+                min="10"
+                max="300"
+                value={refreshIntervalSeconds}
+                onchange={handleRefreshIntervalChange}>
+            </lightning-input>
+        </div>
+
+        <div class="slds-form-element slds-m-bottom_small">
+            <lightning-input
+                type="number"
+                name="maxAppointmentsShown"
+                label="Max Appointments Shown"
+                min="1"
+                max="200"
+                value={maxAppointmentsShown}
+                onchange={handleMaxAppointmentsChange}>
+            </lightning-input>
+        </div>
+
+    </div>
+</template>

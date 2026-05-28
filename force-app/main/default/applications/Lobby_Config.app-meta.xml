@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomApplication xmlns="http://soap.sforce.com/2006/04/metadata">
+    <defaultLandingTab>Lobby_Management</defaultLandingTab>
+    <description>Lobby Management app — staff-facing dashboard and admin configuration for the Lobby Management system.</description>
+    <formFactors>Large</formFactors>
+    <isNavAutoTempTabsDisabled>false</isNavAutoTempTabsDisabled>
+    <isNavPersonalizationDisabled>false</isNavPersonalizationDisabled>
+    <isNavTabPersistenceDisabled>false</isNavTabPersistenceDisabled>
+    <label>Lobby Configuration</label>
+    <navType>Standard</navType>
+    <tabs>Lobby_Management</tabs>
+    <tabs>Lobby_Config</tabs>
+    <uiType>Lightning</uiType>
+</CustomApplication>

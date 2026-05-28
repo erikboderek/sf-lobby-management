@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Admin configuration page for Lobby Management settings.</description>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentName>lobbyConfigManager</componentName>
+                <identifier>c_lobbyConfigManager</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>region1</name>
+        <type>Region</type>
+    </flexiPageRegions>
+    <masterLabel>Lobby Config Page</masterLabel>
+    <template>
+        <name>flexipage:appHomeTemplateHeaderTwoColumns</name>
+    </template>
+    <type>AppPage</type>
+</FlexiPage>

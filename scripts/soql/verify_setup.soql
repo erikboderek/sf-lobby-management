@@ -1,0 +1,5 @@
+// Verify active service territories exist (required for the lobby dashboard)
+SELECT Id, Name, IsActive, OperatingHours.Name, OperatingHours.TimeZone
+FROM ServiceTerritory
+WHERE IsActive = true
+ORDER BY Name ASC

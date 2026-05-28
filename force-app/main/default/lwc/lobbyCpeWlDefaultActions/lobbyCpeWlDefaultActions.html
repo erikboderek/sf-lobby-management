@@ -1,0 +1,16 @@
+<template>
+    <div class="slds-m-bottom_small">
+        <p class="slds-text-body_small slds-text-color_weak">
+            Select which default actions to hide in the waitlist participant card of the waitlist.
+        </p>
+    </div>
+    <lightning-dual-listbox
+        name="wlDefaultActions"
+        label="Default Actions"
+        source-label="Available"
+        selected-label="Selected"
+        options={options}
+        value={selectedValues}
+        onchange={handleChange}>
+    </lightning-dual-listbox>
+</template>

@@ -1,0 +1,24 @@
+<template>
+    <div class="slds-m-bottom_small">
+        <p class="slds-text-body_small slds-text-color_weak">
+            Select which custom flow actions are shown in the waitlist participant card of the waitlist.
+        </p>
+    </div>
+    <template lwc:if={isLoading}>
+        <lightning-spinner alternative-text="Loading actions" size="small"></lightning-spinner>
+    </template>
+    <template lwc:if={hasError}>
+        <p class="slds-text-color_error slds-text-body_small">{errorMessage}</p>
+    </template>
+    <template lwc:if={hasOptions}>
+        <lightning-dual-listbox
+            name="wlCustomActions"
+            label="Custom Actions"
+            source-label="Available"
+            selected-label="Selected"
+            options={options}
+            value={selectedValues}
+            onchange={handleChange}>
+        </lightning-dual-listbox>
+    </template>
+</template>

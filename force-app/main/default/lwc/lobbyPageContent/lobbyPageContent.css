@@ -1,0 +1,566 @@
+/* ── Host / root background ───────────────────────────────────────────────── */
+
+:host {
+    display: block;
+    background-color: var(--slds-g-color-surface-container-1, #ffffff);
+}
+
+/* ── Page Header ──────────────────────────────────────────────────────────── */
+
+.lobby-header {
+    background-color: var(--slds-g-color-surface-container-1, #ffffff);
+    border-bottom: 1px solid var(--slds-g-color-border-1, #dddbda);
+    padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
+}
+
+.lobby-header-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-3, 0.75rem);
+    flex-shrink: 0;
+}
+
+.lobby-territory-control {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+    min-width: 0;
+}
+
+.lobby-territory-label {
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    font-weight: var(--slds-g-font-weight-6, 600);
+    color: var(--slds-g-color-on-surface-2, #3e3e3c);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.lobby-territory-control lightning-combobox {
+    min-width: 14rem;
+}
+
+.lobby-last-updated-wrap {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+    flex-shrink: 0;
+}
+
+.lobby-refresh-btn {
+    flex-shrink: 0;
+}
+
+.lobby-last-updated {
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    color: var(--slds-g-color-on-surface-1, #706e6b);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ── Appointments sub-header ──────────────────────────────────────────────── */
+
+.lobby-appt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.lobby-appt-title {
+    font-weight: var(--slds-g-font-weight-7, 700);
+    color: var(--slds-g-color-on-surface-3, #181818);
+}
+
+/* ── Loading Overlay ──────────────────────────────────────────────────────── */
+
+.lobby-loading-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 255, 255, 0.75);
+    z-index: 9999;
+}
+
+/* ── Empty States ─────────────────────────────────────────────────────────── */
+
+.lobby-empty-state {
+    text-align: center;
+    padding: var(--slds-g-spacing-6, 1.5rem);
+}
+
+.lobby-empty-icon {
+    --slds-c-icon-color-foreground: var(--slds-g-color-on-surface-1, #706e6b);
+    display: block;
+    margin: 0 auto var(--slds-g-spacing-3, 0.75rem);
+}
+
+/* ── Appointment Card ─────────────────────────────────────────────────────── */
+
+.appt-card {
+    position: relative;
+    background-color: var(--slds-g-color-surface-container-1, #ffffff);
+    border: 1px solid var(--slds-g-color-border-1, #dddbda);
+    border-radius: var(--slds-g-radius-border-2, 0.25rem);
+    cursor: pointer;
+    outline: none;
+    transition: box-shadow 0.15s ease;
+}
+
+.appt-card:hover {
+    box-shadow: var(--slds-g-shadow-2, 0 4px 8px rgba(0, 0, 0, 0.1));
+}
+
+.appt-card:focus-visible {
+    box-shadow: var(--slds-g-shadow-outset-focus-1, 0 0 0 4px #066afe);
+}
+
+/* ── Card body ────────────────────────────────────────────────────────────── */
+
+.appt-card-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--slds-g-spacing-3, 0.75rem);
+    padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
+}
+
+.appt-card-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.appt-card-aside {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+/* ── Card typography ──────────────────────────────────────────────────────── */
+
+.appt-name {
+    font-size: var(--slds-g-font-scale-2, 0.875rem);
+    font-weight: var(--slds-g-font-weight-7, 700);
+    color: var(--slds-g-color-brand-base-50, #0176d3);
+    margin: 0 0 var(--slds-g-spacing-1, 0.25rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.appt-subtitle {
+    font-size: var(--slds-g-font-scale-1, 0.8125rem);
+    color: var(--slds-g-color-on-surface-2, #444);
+    margin: 0 0 var(--slds-g-spacing-1, 0.25rem);
+}
+
+.appt-time {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-1, 0.25rem);
+    font-size: var(--slds-g-font-scale-1, 0.8125rem);
+    color: var(--slds-g-color-on-surface-2, #444);
+    margin: 0;
+}
+
+.appt-time-icon {
+    --slds-c-icon-color-foreground: var(--slds-g-color-on-surface-1, #706e6b);
+    flex-shrink: 0;
+}
+
+/* ── Extra fields ─────────────────────────────────────────────────────────── */
+
+.appt-extra-fields {
+    margin: var(--slds-g-spacing-2, 0.5rem) 0 0;
+    padding: 0;
+}
+
+.appt-extra-row {
+    margin-bottom: var(--slds-g-spacing-1, 0.25rem);
+}
+
+.appt-extra-value {
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    color: var(--slds-g-color-on-surface-2, #444);
+    margin: 0;
+    display: block;
+}
+
+/* ── Card footer ──────────────────────────────────────────────────────────── */
+
+.appt-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-4, 1rem);
+    border-top: 1px solid var(--slds-g-color-border-1, #dddbda);
+    background-color: var(--slds-g-color-surface-container-2, #f4f4f4);
+    border-bottom-left-radius: var(--slds-g-radius-border-2, 0.25rem);
+    border-bottom-right-radius: var(--slds-g-radius-border-2, 0.25rem);
+}
+
+.appt-footer-left {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    flex-wrap: wrap;
+}
+
+.appt-footer-right {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-1, 0.25rem);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    flex-shrink: 0;
+}
+
+.appt-footer-icon {
+    --slds-c-icon-color-foreground: var(--slds-g-color-on-surface-1, #706e6b);
+    flex-shrink: 0;
+}
+
+.appt-footer-icon--success {
+    --slds-c-icon-color-foreground: var(--slds-g-color-success-2, #2e844a);
+}
+
+.appt-footer-icon--wait {
+    --slds-c-icon-color-foreground: var(--slds-g-color-error-2, #ba0517);
+}
+
+.appt-footer-checkin {
+    color: var(--slds-g-color-on-surface-2, #444);
+}
+
+.appt-footer-noshow {
+    color: var(--slds-g-color-on-surface-1, #706e6b);
+}
+
+.appt-footer-wait {
+    color: var(--slds-g-color-error-2, #ba0517);
+    font-weight: var(--slds-g-font-weight-7, 700);
+}
+
+/* ── Status Badge Overrides (--slds-c-* component hooks — intentional) ──── */
+
+.appt-status-badge--warning {
+    --slds-c-badge-color-background: var(--slds-g-color-warning-container-1, #fff3e0);
+    --slds-c-badge-text-color: var(--slds-g-color-on-warning-1, #7b3f00);
+}
+
+.appt-status-badge--success {
+    --slds-c-badge-color-background: var(--slds-g-color-brand-base-50, #0176d3);
+    --slds-c-badge-text-color: #ffffff;
+}
+
+.appt-status-badge--success-muted {
+    --slds-c-badge-color-background: var(--slds-g-color-success-container-1, #cdefc4);
+    --slds-c-badge-text-color: var(--slds-g-color-on-surface-1, #706e6b);
+}
+
+.appt-status-badge--error {
+    --slds-c-badge-color-background: var(--slds-g-color-error-container-1, #fddde3);
+    --slds-c-badge-text-color: var(--slds-g-color-on-error-1, #8e0c19);
+}
+
+/* ── Dropdown caret button ───────────────────────────────────────────────── */
+
+.appt-split-caret {
+    height: 2rem;
+    min-height: 2rem;
+}
+
+/* ── Per-card spinner overlay ────────────────────────────────────────────── */
+
+.card-spinner-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 255, 255, 0.85);
+    border-radius: var(--slds-g-radius-border-2, 0.25rem);
+    z-index: 10;
+}
+
+/* ── Card action dropdown ────────────────────────────────────────────────── */
+
+.appt-dropdown-wrap {
+    position: relative;
+}
+
+.appt-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 100;
+    min-width: 12rem;
+    background-color: var(--slds-g-color-surface-container-1, #ffffff);
+    border: 1px solid var(--slds-g-color-border-1, #dddbda);
+    border-radius: var(--slds-g-radius-border-2, 0.25rem);
+    box-shadow: var(--slds-g-shadow-2, 0 4px 8px rgba(0, 0, 0, 0.1));
+}
+
+/* ── Waitlist Panel ───────────────────────────────────────────────────────── */
+
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+
+.lobby-main-grid {
+    align-items: flex-start;
+}
+
+.lobby-waitlist-col {
+    border-left: 1px solid var(--slds-g-color-border-1, #dddbda);
+    padding-left: var(--slds-g-spacing-4, 1rem);
+}
+
+/* ── Flow Modal ───────────────────────────────────────────────────────────── */
+
+.lobby-checkin-modal-container {
+    max-width: 50rem;
+}
+
+/* ── Metrics toggle button ────────────────────────────────────────────────── */
+
+.lobby-metrics-toggle {
+    flex-shrink: 0;
+}
+
+/* ── Metrics carousel strip ───────────────────────────────────────────────── */
+
+.metrics-strip--loading {
+    min-height: 6rem;
+    justify-content: center;
+}
+
+.metrics-strip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--slds-g-spacing-3, 0.75rem);
+    padding: var(--slds-g-spacing-4, 1rem) var(--slds-g-spacing-4, 1rem) calc(var(--slds-g-spacing-4, 1rem) + 1.25rem);
+    background-color: var(--slds-g-color-surface-container-1, #ffffff);
+    border-bottom: 1px solid var(--slds-g-color-border-1, #dddbda);
+    position: relative;
+}
+
+.metrics-cards-row {
+    display: flex;
+    flex: 1;
+    gap: var(--slds-g-spacing-3, 0.75rem);
+    justify-content: center;
+    align-items: stretch;
+}
+
+.metrics-nav {
+    background: var(--slds-g-color-surface-container-1, #ffffff);
+    border: 1px solid var(--slds-g-color-border-1, #dddbda);
+    border-radius: 50%;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    box-shadow: var(--slds-g-shadow-1, 0 2px 2px rgba(0,0,0,0.05));
+    transition: box-shadow 0.15s ease;
+}
+
+.metrics-nav:hover {
+    box-shadow: var(--slds-g-shadow-2, 0 4px 8px rgba(0,0,0,0.1));
+}
+
+/* FIX 2: strict column layout — visual zone grows, label/context pin to bottom */
+.metrics-card {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
+    background-color: var(--slds-g-color-surface-container-1, #ffffff);
+    border: 1px solid var(--slds-g-color-border-1, #dddbda);
+    border-top: 3px solid var(--slds-g-color-brand-base-50, #0176d3);
+    border-radius: var(--slds-g-radius-border-4, 0.5rem);
+    box-shadow: var(--slds-g-shadow-1, 0 2px 2px rgba(0,0,0,0.05));
+    min-height: 9rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Flex-grow zone that stretches to fill all available card height and
+   centres its child (value, chart, or bar) within the space */
+.metrics-visual {
+    flex-grow: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+}
+
+.metrics-value {
+    font-size: 2.25rem;
+    font-weight: var(--slds-g-font-weight-7, 700);
+    color: var(--slds-g-color-brand-base-50, #0176d3);
+    margin: 0 0 0.25rem;
+    line-height: 1;
+}
+
+.metrics-label {
+    font-size: var(--slds-g-font-scale-1, 0.875rem);
+    font-weight: var(--slds-g-font-weight-6, 600);
+    color: var(--slds-g-color-on-surface-2, #3e3e3c);
+    margin: 0 0 0.25rem;
+}
+
+.metrics-context {
+    font-size: var(--slds-g-font-scale-neg-2, 0.6875rem);
+    color: var(--slds-g-color-on-surface-1, #706e6b);
+    margin: 0;
+}
+
+/* ── Chart container (gauge / pie / line) ─────────────────────────────────── */
+
+.metrics-chart-wrap {
+    width: 3.5rem;
+    height: 3.5rem;
+    margin-bottom: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.metrics-gauge,
+.metrics-pie {
+    width: 3.5rem;
+    height: 3.5rem;
+}
+
+.metrics-line {
+    width: 7rem;
+    height: 3rem;
+}
+
+.metrics-gauge__track {
+    stroke: var(--slds-g-color-border-1, #dddbda);
+}
+
+.metrics-gauge__fill {
+    stroke: var(--slds-g-color-brand-base-50, #0176d3);
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.4s ease;
+}
+
+.metrics-chart-text {
+    font-size: 1.2rem;
+    font-weight: 700;
+    fill: var(--slds-g-color-on-surface-2, #3e3e3c);
+}
+
+/* ── Bar ──────────────────────────────────────────────────────────────────── */
+
+.metrics-bar-wrap {
+    width: 100%;
+    max-width: 14rem;
+    margin-bottom: 0.5rem;
+}
+
+.metrics-bar-track {
+    height: 0.75rem;
+    background-color: var(--slds-g-color-border-1, #e8e8e8);
+    border-radius: var(--slds-g-radius-border-4, 0.5rem);
+    overflow: hidden;
+    margin-bottom: 0.25rem;
+}
+
+.metrics-bar-fill {
+    height: 100%;
+    background-color: var(--slds-g-color-brand-base-50, #0176d3);
+    border-radius: var(--slds-g-radius-border-4, 0.5rem);
+    transition: width 0.4s ease;
+}
+
+.metrics-value--bar {
+    font-size: 2.25rem;
+    font-weight: var(--slds-g-font-weight-7, 700);
+    color: var(--slds-g-color-brand-base-50, #0176d3);
+    margin: 0 0 0.25rem;
+    line-height: 1;
+}
+
+/* ── Carousel dots ────────────────────────────────────────────────────────── */
+
+.metrics-dots {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0.35rem;
+}
+
+.metrics-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    border: none;
+    background-color: var(--slds-g-color-border-1, #c9c7c5);
+    cursor: pointer;
+    padding: 0;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.metrics-dot--active {
+    background-color: var(--slds-g-color-brand-base-50, #0176d3);
+    transform: scale(1.3);
+}
+
+/* ── Action Modals ────────────────────────────────────────────────────────── */
+
+.lobby-action-modal {
+    max-width: 34rem;
+}
+
+.walk-in-spinner-inline {
+    position: static;
+    display: inline-block;
+    margin-left: var(--slds-g-spacing-2, 0.5rem);
+}
+
+/* ── Reschedule Slot Grid ─────────────────────────────────────────────────── */
+
+.action-slot-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--slds-g-spacing-2, 0.5rem);
+    max-height: 18rem;
+    overflow-y: auto;
+}
+
+.action-slot {
+    padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-3, 0.75rem);
+    border: 1px solid var(--slds-g-color-border-1, #dddbda);
+    border-radius: var(--slds-g-radius-border-2, 0.25rem);
+    background: var(--slds-g-color-surface-container-1, #fff);
+    cursor: pointer;
+    text-align: left;
+    font-size: var(--slds-g-font-scale-1, 0.8125rem);
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.action-slot:hover {
+    background: var(--slds-g-color-surface-container-2, #f3f3f3);
+    border-color: var(--slds-g-color-brand-base-50, #0176d3);
+}
+
+.action-slot--selected {
+    background: var(--slds-g-color-brand-container-1, #e8f4fd);
+    border-color: var(--slds-g-color-brand-base-50, #0176d3);
+    font-weight: var(--slds-g-font-weight-7, 700);
+}

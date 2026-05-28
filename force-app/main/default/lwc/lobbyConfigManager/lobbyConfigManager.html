@@ -1,0 +1,783 @@
+<template>
+    <lightning-card title="Lobby Configuration" icon-name="standard:settings">
+        <div class="slds-card__body slds-card__body_inner">
+
+            <template lwc:if={isLoading}>
+                <div class="slds-is-relative slds-p-around_large">
+                    <lightning-spinner alternative-text="Loading configuration..." size="medium"></lightning-spinner>
+                </div>
+            </template>
+
+            <template lwc:if={loadError}>
+                <div class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_medium" role="alert">
+                    <span class="slds-assistive-text">Error</span>
+                    <p>{loadError}</p>
+                </div>
+            </template>
+
+            <template lwc:if={isReady}>
+
+                <lightning-tabset>
+
+                    <!-- ══════════════════════════════════════════════════════
+                         TAB 1 — GENERAL
+                    ══════════════════════════════════════════════════════ -->
+                    <lightning-tab label="General" value="general" icon-name="utility:settings">
+
+                        <!-- Refresh / Max -->
+                        <div class="config-two-col slds-m-bottom_medium">
+                            <div class="config-two-col__item">
+                                <lightning-input
+                                    type="number"
+                                    name="refreshInterval"
+                                    label="Refresh Interval (seconds)"
+                                    min="10"
+                                    max="300"
+                                    value={refreshInterval}
+                                    onchange={handleRefreshIntervalChange}>
+                                </lightning-input>
+                                <p class="config-field__help">How frequently the lobby dashboard polls for updated data. Minimum 10 s, maximum 300 s.</p>
+                            </div>
+                            <div class="config-two-col__item">
+                                <lightning-input
+                                    type="number"
+                                    name="maxAppointments"
+                                    label="Max Appointments Shown"
+                                    min="1"
+                                    max="200"
+                                    value={maxAppointments}
+                                    onchange={handleMaxAppointmentsChange}>
+                                </lightning-input>
+                                <p class="config-field__help">Maximum number of appointments displayed across all sections.</p>
+                            </div>
+                        </div>
+
+                        <!-- ── Status Grouping ───────────────────────────── -->
+                        <div class="config-subsection-header slds-m-top_medium">
+                            <h3 class="config-subsection-title">Status Grouping</h3>
+                            <p class="config-subsection-desc">By default the dashboard groups appointments by time. Enable custom mapping to manually assign each status to a section.</p>
+                        </div>
+
+                        <div class="slds-m-bottom_medium">
+                            <lightning-input
+                                type="toggle"
+                                name="useCustomStatusMapping"
+                                label="Use Custom Status Mappings"
+                                checked={useCustomStatusMapping}
+                                onchange={handleUseCustomStatusMappingChange}
+                                message-toggle-active="On"
+                                message-toggle-inactive="Off">
+                            </lightning-input>
+                        </div>
+
+                        <template lwc:if={showStatusMappingConfig}>
+                            <div class="config-two-col slds-m-bottom_medium">
+                                <div class="config-two-col__item">
+                                    <lightning-dual-listbox
+                                        name="currentStatuses"
+                                        label="Current (Being Served) Statuses"
+                                        source-label="Available"
+                                        selected-label="In This Section"
+                                        options={currentStatusOptions}
+                                        value={currentStatuses}
+                                        onchange={handleCurrentStatusesChange}>
+                                    </lightning-dual-listbox>
+                                </div>
+                                <div class="config-two-col__item">
+                                    <lightning-dual-listbox
+                                        name="upcomingStatuses"
+                                        label="Upcoming (Scheduled) Statuses"
+                                        source-label="Available"
+                                        selected-label="In This Section"
+                                        options={upcomingStatusOptions}
+                                        value={upcomingStatuses}
+                                        onchange={handleUpcomingStatusesChange}>
+                                    </lightning-dual-listbox>
+                                </div>
+                                <div class="config-two-col__item">
+                                    <lightning-dual-listbox
+                                        name="pastStatuses"
+                                        label="Past (Completed) Statuses"
+                                        source-label="Available"
+                                        selected-label="In This Section"
+                                        options={pastStatusOptions}
+                                        value={pastStatuses}
+                                        onchange={handlePastStatusesChange}>
+                                    </lightning-dual-listbox>
+                                </div>
+                                <div class="config-two-col__item">
+                                    <lightning-dual-listbox
+                                        name="missedStatuses"
+                                        label="Missed / No-Show Statuses"
+                                        source-label="Available"
+                                        selected-label="In This Section"
+                                        options={missedStatusOptions}
+                                        value={missedStatuses}
+                                        onchange={handleMissedStatusesChange}>
+                                    </lightning-dual-listbox>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- ── KPI Metrics ───────────────────────────────── -->
+                        <div class="config-subsection-header slds-m-top_medium">
+                            <h3 class="config-subsection-title">KPI Metrics</h3>
+                            <p class="config-subsection-desc">When enabled, a collapsible metrics strip appears at the top of the lobby dashboard. Choose up to 6 KPIs with optional color thresholds.</p>
+                        </div>
+
+                        <div class="config-two-col slds-m-bottom_medium">
+                            <div class="config-two-col__item">
+                                <lightning-input
+                                    type="toggle"
+                                    name="enableMetrics"
+                                    label="Enable Metrics Strip"
+                                    checked={enableMetrics}
+                                    onchange={handleEnableMetricsChange}
+                                    message-toggle-active="On"
+                                    message-toggle-inactive="Off">
+                                </lightning-input>
+                            </div>
+                            <div class="config-two-col__item">
+                                <lightning-input
+                                    type="toggle"
+                                    name="showMetricsByDefault"
+                                    label="Show Metrics By Default"
+                                    checked={showMetricsByDefault}
+                                    onchange={handleShowMetricsByDefaultChange}
+                                    message-toggle-active="On"
+                                    message-toggle-inactive="Off">
+                                </lightning-input>
+                                <p class="config-field__help">When off, the metrics strip starts collapsed and staff must expand it manually.</p>
+                            </div>
+                        </div>
+
+                        <template lwc:if={enableMetrics}>
+
+                            <!-- Border Color -->
+                            <div class="slds-m-bottom_medium config-two-col">
+                                <div class="config-two-col__item">
+                                    <lightning-input
+                                        type="text"
+                                        name="metricsBorderColor"
+                                        label="Metrics Top Border Color"
+                                        placeholder="#0176d3 or var(--slds-g-color-brand-base-50)"
+                                        value={metricsBorderColor}
+                                        onchange={handleMetricsBorderColorChange}>
+                                    </lightning-input>
+                                    <p class="config-field__help">Applies to the top accent border of every metric card. Accepts hex, rgb, or SLDS CSS token.</p>
+                                </div>
+                            </div>
+
+                            <!-- KPI Slots -->
+                            <div class="metrics-config">
+                                <template lwc:if={showMetricSlot1}>
+                                    <div class="metric-slot">
+                                        <div class="metric-slot__header">
+                                            <span class="metric-slot__label">KPI 1</span>
+                                            <button class="metric-slot__clear" data-slot="0" onclick={handleMetricClear} title="Remove KPI 1">&#x2715;</button>
+                                        </div>
+                                        <div class="metric-slot__fields">
+                                            <lightning-combobox name="metric1Kpi" label="KPI" placeholder="Select a metric..." options={kpiOptions1} value={metric1Kpi} data-slot="0" onchange={handleMetricKpiChange}></lightning-combobox>
+                                            <lightning-combobox name="metric1Display" label="Display As" options={displayTypeOptions} value={metric1Display} data-slot="0" onchange={handleMetricDisplayChange}></lightning-combobox>
+                                        </div>
+                                        <template lwc:if={hasRangeSlot1}>
+                                            <div class="metric-ranges">
+                                                <p class="metric-ranges__label">Color Thresholds</p>
+                                                <template for:each={rangeRows1} for:item="row">
+                                                    <div key={row.index} class="slds-grid slds-gutters_x-small slds-grid_vertical-align-end metric-range-row">
+                                                        <div class="slds-col slds-size_3-of-8">
+                                                            <lightning-input type="number" label="≥ Value" value={row.threshold} data-slot="1" data-index={row.index} data-field="threshold" onchange={handleRangeThresholdChange}></lightning-input>
+                                                        </div>
+                                                        <div class="slds-col slds-size_4-of-8">
+                                                            <lightning-input type="text" label="Color" value={row.color} placeholder="#F6538A" data-slot="1" data-index={row.index} data-field="color" onchange={handleRangeColorChange}></lightning-input>
+                                                        </div>
+                                                        <div class="slds-col slds-size_1-of-8 metric-range-del">
+                                                            <lightning-button-icon icon-name="utility:delete" variant="border-filled" size="small" alternative-text="Remove" data-slot="1" data-index={row.index} onclick={handleRemoveRange}></lightning-button-icon>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                                <template lwc:if={canAddRange1}>
+                                                    <button class="slds-button slds-button_neutral slds-button_small slds-m-top_x-small" data-slot="1" onclick={handleAddRange}>+ Add Threshold</button>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                                <template lwc:if={showMetricSlot2}>
+                                    <div class="metric-slot">
+                                        <div class="metric-slot__header">
+                                            <span class="metric-slot__label">KPI 2</span>
+                                            <button class="metric-slot__clear" data-slot="1" onclick={handleMetricClear} title="Remove KPI 2">&#x2715;</button>
+                                        </div>
+                                        <div class="metric-slot__fields">
+                                            <lightning-combobox name="metric2Kpi" label="KPI" placeholder="Select a metric..." options={kpiOptions2} value={metric2Kpi} data-slot="1" onchange={handleMetricKpiChange}></lightning-combobox>
+                                            <lightning-combobox name="metric2Display" label="Display As" options={displayTypeOptions} value={metric2Display} data-slot="1" onchange={handleMetricDisplayChange}></lightning-combobox>
+                                        </div>
+                                        <template lwc:if={hasRangeSlot2}>
+                                            <div class="metric-ranges">
+                                                <p class="metric-ranges__label">Color Thresholds</p>
+                                                <template for:each={rangeRows2} for:item="row">
+                                                    <div key={row.index} class="slds-grid slds-gutters_x-small slds-grid_vertical-align-end metric-range-row">
+                                                        <div class="slds-col slds-size_3-of-8">
+                                                            <lightning-input type="number" label="≥ Value" value={row.threshold} data-slot="2" data-index={row.index} data-field="threshold" onchange={handleRangeThresholdChange}></lightning-input>
+                                                        </div>
+                                                        <div class="slds-col slds-size_4-of-8">
+                                                            <lightning-input type="text" label="Color" value={row.color} placeholder="#F6538A" data-slot="2" data-index={row.index} data-field="color" onchange={handleRangeColorChange}></lightning-input>
+                                                        </div>
+                                                        <div class="slds-col slds-size_1-of-8 metric-range-del">
+                                                            <lightning-button-icon icon-name="utility:delete" variant="border-filled" size="small" alternative-text="Remove" data-slot="2" data-index={row.index} onclick={handleRemoveRange}></lightning-button-icon>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                                <template lwc:if={canAddRange2}>
+                                                    <button class="slds-button slds-button_neutral slds-button_small slds-m-top_x-small" data-slot="2" onclick={handleAddRange}>+ Add Threshold</button>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                                <template lwc:if={showMetricSlot3}>
+                                    <div class="metric-slot">
+                                        <div class="metric-slot__header">
+                                            <span class="metric-slot__label">KPI 3</span>
+                                            <button class="metric-slot__clear" data-slot="2" onclick={handleMetricClear} title="Remove KPI 3">&#x2715;</button>
+                                        </div>
+                                        <div class="metric-slot__fields">
+                                            <lightning-combobox name="metric3Kpi" label="KPI" placeholder="Select a metric..." options={kpiOptions3} value={metric3Kpi} data-slot="2" onchange={handleMetricKpiChange}></lightning-combobox>
+                                            <lightning-combobox name="metric3Display" label="Display As" options={displayTypeOptions} value={metric3Display} data-slot="2" onchange={handleMetricDisplayChange}></lightning-combobox>
+                                        </div>
+                                        <template lwc:if={hasRangeSlot3}>
+                                            <div class="metric-ranges">
+                                                <p class="metric-ranges__label">Color Thresholds</p>
+                                                <template for:each={rangeRows3} for:item="row">
+                                                    <div key={row.index} class="slds-grid slds-gutters_x-small slds-grid_vertical-align-end metric-range-row">
+                                                        <div class="slds-col slds-size_3-of-8">
+                                                            <lightning-input type="number" label="≥ Value" value={row.threshold} data-slot="3" data-index={row.index} data-field="threshold" onchange={handleRangeThresholdChange}></lightning-input>
+                                                        </div>
+                                                        <div class="slds-col slds-size_4-of-8">
+                                                            <lightning-input type="text" label="Color" value={row.color} placeholder="#F6538A" data-slot="3" data-index={row.index} data-field="color" onchange={handleRangeColorChange}></lightning-input>
+                                                        </div>
+                                                        <div class="slds-col slds-size_1-of-8 metric-range-del">
+                                                            <lightning-button-icon icon-name="utility:delete" variant="border-filled" size="small" alternative-text="Remove" data-slot="3" data-index={row.index} onclick={handleRemoveRange}></lightning-button-icon>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                                <template lwc:if={canAddRange3}>
+                                                    <button class="slds-button slds-button_neutral slds-button_small slds-m-top_x-small" data-slot="3" onclick={handleAddRange}>+ Add Threshold</button>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                                <template lwc:if={showMetricSlot4}>
+                                    <div class="metric-slot">
+                                        <div class="metric-slot__header">
+                                            <span class="metric-slot__label">KPI 4</span>
+                                            <button class="metric-slot__clear" data-slot="3" onclick={handleMetricClear} title="Remove KPI 4">&#x2715;</button>
+                                        </div>
+                                        <div class="metric-slot__fields">
+                                            <lightning-combobox name="metric4Kpi" label="KPI" placeholder="Select a metric..." options={kpiOptions4} value={metric4Kpi} data-slot="3" onchange={handleMetricKpiChange}></lightning-combobox>
+                                            <lightning-combobox name="metric4Display" label="Display As" options={displayTypeOptions} value={metric4Display} data-slot="3" onchange={handleMetricDisplayChange}></lightning-combobox>
+                                        </div>
+                                        <template lwc:if={hasRangeSlot4}>
+                                            <div class="metric-ranges">
+                                                <p class="metric-ranges__label">Color Thresholds</p>
+                                                <template for:each={rangeRows4} for:item="row">
+                                                    <div key={row.index} class="slds-grid slds-gutters_x-small slds-grid_vertical-align-end metric-range-row">
+                                                        <div class="slds-col slds-size_3-of-8">
+                                                            <lightning-input type="number" label="≥ Value" value={row.threshold} data-slot="4" data-index={row.index} data-field="threshold" onchange={handleRangeThresholdChange}></lightning-input>
+                                                        </div>
+                                                        <div class="slds-col slds-size_4-of-8">
+                                                            <lightning-input type="text" label="Color" value={row.color} placeholder="#F6538A" data-slot="4" data-index={row.index} data-field="color" onchange={handleRangeColorChange}></lightning-input>
+                                                        </div>
+                                                        <div class="slds-col slds-size_1-of-8 metric-range-del">
+                                                            <lightning-button-icon icon-name="utility:delete" variant="border-filled" size="small" alternative-text="Remove" data-slot="4" data-index={row.index} onclick={handleRemoveRange}></lightning-button-icon>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                                <template lwc:if={canAddRange4}>
+                                                    <button class="slds-button slds-button_neutral slds-button_small slds-m-top_x-small" data-slot="4" onclick={handleAddRange}>+ Add Threshold</button>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                                <template lwc:if={showMetricSlot5}>
+                                    <div class="metric-slot">
+                                        <div class="metric-slot__header">
+                                            <span class="metric-slot__label">KPI 5</span>
+                                            <button class="metric-slot__clear" data-slot="4" onclick={handleMetricClear} title="Remove KPI 5">&#x2715;</button>
+                                        </div>
+                                        <div class="metric-slot__fields">
+                                            <lightning-combobox name="metric5Kpi" label="KPI" placeholder="Select a metric..." options={kpiOptions5} value={metric5Kpi} data-slot="4" onchange={handleMetricKpiChange}></lightning-combobox>
+                                            <lightning-combobox name="metric5Display" label="Display As" options={displayTypeOptions} value={metric5Display} data-slot="4" onchange={handleMetricDisplayChange}></lightning-combobox>
+                                        </div>
+                                        <template lwc:if={hasRangeSlot5}>
+                                            <div class="metric-ranges">
+                                                <p class="metric-ranges__label">Color Thresholds</p>
+                                                <template for:each={rangeRows5} for:item="row">
+                                                    <div key={row.index} class="slds-grid slds-gutters_x-small slds-grid_vertical-align-end metric-range-row">
+                                                        <div class="slds-col slds-size_3-of-8">
+                                                            <lightning-input type="number" label="≥ Value" value={row.threshold} data-slot="5" data-index={row.index} data-field="threshold" onchange={handleRangeThresholdChange}></lightning-input>
+                                                        </div>
+                                                        <div class="slds-col slds-size_4-of-8">
+                                                            <lightning-input type="text" label="Color" value={row.color} placeholder="#F6538A" data-slot="5" data-index={row.index} data-field="color" onchange={handleRangeColorChange}></lightning-input>
+                                                        </div>
+                                                        <div class="slds-col slds-size_1-of-8 metric-range-del">
+                                                            <lightning-button-icon icon-name="utility:delete" variant="border-filled" size="small" alternative-text="Remove" data-slot="5" data-index={row.index} onclick={handleRemoveRange}></lightning-button-icon>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                                <template lwc:if={canAddRange5}>
+                                                    <button class="slds-button slds-button_neutral slds-button_small slds-m-top_x-small" data-slot="5" onclick={handleAddRange}>+ Add Threshold</button>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                                <template lwc:if={showMetricSlot6}>
+                                    <div class="metric-slot">
+                                        <div class="metric-slot__header">
+                                            <span class="metric-slot__label">KPI 6</span>
+                                            <button class="metric-slot__clear" data-slot="5" onclick={handleMetricClear} title="Remove KPI 6">&#x2715;</button>
+                                        </div>
+                                        <div class="metric-slot__fields">
+                                            <lightning-combobox name="metric6Kpi" label="KPI" placeholder="Select a metric..." options={kpiOptions6} value={metric6Kpi} data-slot="5" onchange={handleMetricKpiChange}></lightning-combobox>
+                                            <lightning-combobox name="metric6Display" label="Display As" options={displayTypeOptions} value={metric6Display} data-slot="5" onchange={handleMetricDisplayChange}></lightning-combobox>
+                                        </div>
+                                        <template lwc:if={hasRangeSlot6}>
+                                            <div class="metric-ranges">
+                                                <p class="metric-ranges__label">Color Thresholds</p>
+                                                <template for:each={rangeRows6} for:item="row">
+                                                    <div key={row.index} class="slds-grid slds-gutters_x-small slds-grid_vertical-align-end metric-range-row">
+                                                        <div class="slds-col slds-size_3-of-8">
+                                                            <lightning-input type="number" label="≥ Value" value={row.threshold} data-slot="6" data-index={row.index} data-field="threshold" onchange={handleRangeThresholdChange}></lightning-input>
+                                                        </div>
+                                                        <div class="slds-col slds-size_4-of-8">
+                                                            <lightning-input type="text" label="Color" value={row.color} placeholder="#F6538A" data-slot="6" data-index={row.index} data-field="color" onchange={handleRangeColorChange}></lightning-input>
+                                                        </div>
+                                                        <div class="slds-col slds-size_1-of-8 metric-range-del">
+                                                            <lightning-button-icon icon-name="utility:delete" variant="border-filled" size="small" alternative-text="Remove" data-slot="6" data-index={row.index} onclick={handleRemoveRange}></lightning-button-icon>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                                <template lwc:if={canAddRange6}>
+                                                    <button class="slds-button slds-button_neutral slds-button_small slds-m-top_x-small" data-slot="6" onclick={handleAddRange}>+ Add Threshold</button>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <template lwc:if={canAddKpiSlot}>
+                                <div class="metric-add-row">
+                                    <button class="slds-button slds-button_neutral metric-add-btn" onclick={handleAddKpiSlot}>
+                                        <lightning-icon icon-name="utility:add" size="xx-small" alternative-text="Add KPI" class="slds-m-right_x-small"></lightning-icon>
+                                        Add KPI
+                                    </button>
+                                </div>
+                            </template>
+
+                            <!-- Metrics Preview -->
+                            <div class="config-subsection-header slds-m-top_large">
+                                <h3 class="config-subsection-title">Metrics Preview</h3>
+                                <p class="config-subsection-desc">Representative sample values — actual data is territory-specific.</p>
+                            </div>
+
+                            <template lwc:if={hasMetricPreviews}>
+                                <div class="metric-preview-row">
+                                    <template for:each={metricPreviews} for:item="mp">
+                                        <div key={mp.num} class="metric-preview-card">
+                                            <div class="metric-preview-card__slot">KPI {mp.num}</div>
+                                            <div class="metric-preview-card__body">
+                                                <template lwc:if={mp.isNumber}>
+                                                    <p class="mp-big-value" style={mp.valueColorStyle}>{mp.displayValue}</p>
+                                                </template>
+                                                <template lwc:if={mp.isPercentage}>
+                                                    <p class="mp-big-value mp-big-value--pct" style={mp.valueColorStyle}>{mp.displayValue}</p>
+                                                    <div class="mp-pct-bar-track">
+                                                        <div class="mp-pct-bar-fill" style={mp.barFillStyle}></div>
+                                                    </div>
+                                                </template>
+                                                <template lwc:if={mp.isBar}>
+                                                    <div class="mp-bar-wrap">
+                                                        <div class="mp-bar-track">
+                                                            <div class="mp-bar-fill" style={mp.barFillStyle}></div>
+                                                        </div>
+                                                        <span class="mp-bar-label" style={mp.valueColorStyle}>{mp.displayValue}</span>
+                                                    </div>
+                                                </template>
+                                                <template lwc:if={mp.isPie}>
+                                                    <div class="mp-chart-wrap">
+                                                        <svg viewBox="0 0 100 100" class="mp-pie" aria-hidden="true">
+                                                            <circle cx="50" cy="50" r="40" fill="var(--slds-g-color-border-1,#e8e8e8)"></circle>
+                                                            <path d={mp.piePath} fill={mp.accentFill}></path>
+                                                            <text x="50" y="56" text-anchor="middle" class="mp-chart-center-text">{mp.pct}%</text>
+                                                        </svg>
+                                                    </div>
+                                                </template>
+                                                <template lwc:if={mp.isLine}>
+                                                    <div class="mp-chart-wrap">
+                                                        <svg viewBox="0 0 100 40" class="mp-line" aria-hidden="true" preserveAspectRatio="none">
+                                                            <polyline points={mp.lineAreaPoints} fill="var(--slds-g-color-brand-base-10,#e8f4fd)" stroke="none"></polyline>
+                                                            <polyline points={mp.linePoints} fill="none" stroke={mp.accentFill} stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                                                        </svg>
+                                                        <p class="mp-line-value" style={mp.valueColorStyle}>{mp.displayValue}</p>
+                                                    </div>
+                                                </template>
+                                                <template lwc:if={mp.isGauge}>
+                                                    <div class="mp-chart-wrap">
+                                                        <svg viewBox="0 0 100 100" class="mp-gauge" aria-hidden="true">
+                                                            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--slds-g-color-border-1,#dddbda)" stroke-width="10"></circle>
+                                                            <circle cx="50" cy="50" r="40" fill="none"
+                                                                stroke={mp.accentFill}
+                                                                stroke-width="10"
+                                                                stroke-dasharray={mp.gaugeDash}
+                                                                stroke-linecap="round"
+                                                                transform="rotate(-90 50 50)">
+                                                            </circle>
+                                                            <text x="50" y="56" text-anchor="middle" class="mp-chart-center-text">{mp.displayValue}</text>
+                                                        </svg>
+                                                    </div>
+                                                </template>
+                                                <p class="mp-label">{mp.label}</p>
+                                                <p class="mp-context">{mp.context}</p>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <template lwc:if={metricsPreviewEmpty}>
+                                <p class="slds-text-body_regular slds-text-color_weak slds-text-align_center slds-p-around_medium">
+                                    Select at least one KPI above to see the preview.
+                                </p>
+                            </template>
+
+                        </template>
+
+                    </lightning-tab>
+
+                    <!-- ══════════════════════════════════════════════════════
+                         TAB 2 — SERVICE APPOINTMENTS
+                    ══════════════════════════════════════════════════════ -->
+                    <lightning-tab label="Service Appointments" value="appointments" icon-name="standard:service_appointment">
+
+                        <!-- Target Lookup Field -->
+                        <div class="config-field slds-m-bottom_medium">
+                            <lightning-combobox
+                                name="targetLookupField"
+                                label="Navigate to (on Card Click)"
+                                placeholder="Select a reference field..."
+                                options={saReferenceFieldOptions}
+                                value={targetLookupField}
+                                onchange={handleTargetLookupFieldChange}>
+                            </lightning-combobox>
+                            <p class="config-field__help">Choose which related record opens when a staff member clicks an appointment card. Defaults to the Service Appointment itself if left blank.</p>
+                        </div>
+
+                        <div class="config-two-col">
+
+                            <!-- LEFT: Actions -->
+                            <div class="config-two-col__item">
+                                <div class="config-subsection-header">
+                                    <h3 class="config-subsection-title">Appointment Card Actions</h3>
+                                    <p class="config-subsection-desc">Move built-in actions to Hidden to suppress them. Add Quick Actions to surface them in the card's action menu.</p>
+                                </div>
+
+                                <div class="slds-m-bottom_medium">
+                                    <template lwc:if={saActionsLoading}>
+                                        <lightning-spinner size="small" alternative-text="Loading actions..."></lightning-spinner>
+                                    </template>
+                                    <template lwc:if={hasSaActionOptions}>
+                                        <lightning-dual-listbox
+                                            name="saCustomActions"
+                                            label="Custom Actions"
+                                            source-label="Available"
+                                            selected-label="Shown in Menu"
+                                            options={saActionOptions}
+                                            value={saCustomActions}
+                                            onchange={handleSaCustomActionsChange}>
+                                        </lightning-dual-listbox>
+                                    </template>
+                                    <template lwc:if={saActionsError}>
+                                        <p class="slds-text-color_error slds-text-body_small">{saActionsError}</p>
+                                    </template>
+                                </div>
+
+                                <div class="slds-m-bottom_medium">
+                                    <lightning-dual-listbox
+                                        name="saDefaultHiddenActions"
+                                        label="Built-In Actions"
+                                        source-label="Visible"
+                                        selected-label="Hidden"
+                                        options={saDefaultActionOptions}
+                                        value={saDefaultHiddenActions}
+                                        onchange={handleSaDefaultHiddenChange}>
+                                    </lightning-dual-listbox>
+                                </div>
+                            </div>
+
+                            <!-- RIGHT: Fields + Preview -->
+                            <div class="config-two-col__item">
+                                <div class="config-subsection-header">
+                                    <h3 class="config-subsection-title">Appointment Card Fields</h3>
+                                    <p class="config-subsection-desc">Choose additional ServiceAppointment fields to display on each card. Contact name, work type, appointment number, and scheduled time are always shown.</p>
+                                </div>
+
+                                <div class="slds-m-bottom_small">
+                                    <lightning-dual-listbox
+                                        name="appointmentFields"
+                                        label="Extra Fields"
+                                        source-label="Available Fields"
+                                        selected-label="Shown on Card"
+                                        options={saFieldOptions}
+                                        value={appointmentFields}
+                                        onchange={handleAppointmentFieldsChange}>
+                                    </lightning-dual-listbox>
+                                </div>
+
+                                <div class="preview-card">
+                                    <div class="preview-card__header">
+                                        <lightning-icon icon-name="utility:preview" size="xx-small" alternative-text="Preview"></lightning-icon>
+                                        <span>Card Preview</span>
+                                    </div>
+                                    <div class="preview-card__body">
+                                        <div class="preview-layout">
+                                            <div class="preview-layout__main">
+                                                <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_xx-small">Base Fields (Always Shown)</p>
+                                                <p class="preview-name">Jane Doe</p>
+                                                <p class="preview-sub">Real ID Application &bull; SA-00123</p>
+                                                <p class="preview-sub">9:30 AM to 9:50 AM</p>
+                                                <template lwc:if={hasApptPreviewFields}>
+                                                    <dl class="preview-fields">
+                                                        <template for:each={apptPreviewFields} for:item="f">
+                                                            <div key={f.label} class="preview-field-row">
+                                                                <dt class="preview-field-label">{f.label}</dt>
+                                                                <dd class="preview-field-value">—</dd>
+                                                            </div>
+                                                        </template>
+                                                    </dl>
+                                                </template>
+                                                <template lwc:else>
+                                                    <p class="preview-hint">No extra fields selected yet.</p>
+                                                </template>
+                                            </div>
+                                            <div class="preview-layout__aside">
+                                                <lightning-badge label="Scheduled" class="preview-badge preview-badge--warning"></lightning-badge>
+                                                <div class="preview-actions">
+                                                    <div class="preview-actions-dropdown">
+                                                        <span class="preview-btn preview-btn--neutral preview-btn--actions-trigger">Actions &#9660;</span>
+                                                        <div class="preview-dropdown preview-dropdown--actions">
+                                                            <p class="preview-dropdown-item preview-dropdown-item--checkin">Check In</p>
+                                                            <template for:each={saCustomActionsPreview} for:item="a">
+                                                                <p key={a} class="preview-dropdown-item">{a}</p>
+                                                            </template>
+                                                            <template for:each={saDefaultVisiblePreview} for:item="a">
+                                                                <p key={a.value} class="preview-dropdown-item">{a.label}</p>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="preview-footer">
+                                            <span class="preview-footer-item">&#x2713; Check-In Time: 9:31 AM</span>
+                                            <span class="preview-footer-item preview-footer-wait">&#x23F1; Wait Time: 20 min</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </lightning-tab>
+
+                    <!-- ══════════════════════════════════════════════════════
+                         TAB 3 — WAITLIST
+                    ══════════════════════════════════════════════════════ -->
+                    <lightning-tab label="Waitlist" value="waitlist" icon-name="standard:queue">
+
+                        <!-- Walk-In Check-In Method -->
+                        <div class="config-field slds-m-bottom_medium">
+                            <lightning-combobox
+                                name="checkInMethod"
+                                label="Walk-In Check-In Method"
+                                options={checkInMethodOptions}
+                                value={checkInMethod}
+                                onchange={handleCheckInMethodChange}>
+                            </lightning-combobox>
+                            <p class="config-field__help">Choose how the walk-in check-in form is launched. <strong>Custom LWC</strong> uses the built-in modal with person-account search. <strong>Screen Flow</strong> lets you designate any active flow.</p>
+                        </div>
+
+                        <!-- Walk-In Check-In Flow (visible only when method = Flow) -->
+                        <template lwc:if={showFlowPickerConfig}>
+                        <div class="config-field slds-m-bottom_medium">
+                            <lightning-combobox
+                                name="checkinFlow"
+                                label="Walk-In Check-In Flow"
+                                placeholder="Select a flow..."
+                                options={flowOptions}
+                                value={checkinFlow}
+                                onchange={handleCheckinFlowChange}>
+                            </lightning-combobox>
+                            <template lwc:if={flowLoadError}>
+                                <p class="slds-text-color_error slds-text-body_small slds-m-top_xx-small">{flowLoadError}</p>
+                            </template>
+                            <p class="config-field__help">The Screen or Auto-Launched Flow launched when staff click <strong>Check In Walk-In</strong>.</p>
+                        </div>
+                        </template>
+
+                        <!-- WL Target Lookup Field -->
+                        <div class="config-field slds-m-bottom_medium">
+                            <lightning-combobox
+                                name="wlTargetLookupField"
+                                label="Navigate to (on Card Click)"
+                                placeholder="Select a reference field..."
+                                options={wlReferenceFieldOptions}
+                                value={wlTargetLookupField}
+                                onchange={handleWlTargetLookupFieldChange}>
+                            </lightning-combobox>
+                            <p class="config-field__help">Choose which related record opens when a staff member clicks a waitlist card. Defaults to the WaitlistParticipant record itself if left blank.</p>
+                        </div>
+
+                        <div class="config-two-col">
+
+                            <!-- LEFT: Actions -->
+                            <div class="config-two-col__item">
+                                <div class="config-subsection-header">
+                                    <h3 class="config-subsection-title">Waitlist Card Actions</h3>
+                                    <p class="config-subsection-desc">Control which action buttons appear on waitlist cards. Add Quick Actions to surface them in the card's action menu.</p>
+                                </div>
+
+                                <div class="slds-m-bottom_medium">
+                                    <template lwc:if={wlActionsLoading}>
+                                        <lightning-spinner size="small" alternative-text="Loading actions..."></lightning-spinner>
+                                    </template>
+                                    <template lwc:if={hasWlActionOptions}>
+                                        <lightning-dual-listbox
+                                            name="wlCustomActions"
+                                            label="Custom Actions"
+                                            source-label="Available"
+                                            selected-label="Shown in Menu"
+                                            options={wlActionOptions}
+                                            value={wlCustomActions}
+                                            onchange={handleWlCustomActionsChange}>
+                                        </lightning-dual-listbox>
+                                    </template>
+                                    <template lwc:if={wlActionsError}>
+                                        <p class="slds-text-color_error slds-text-body_small">{wlActionsError}</p>
+                                    </template>
+                                </div>
+
+                                <div class="slds-m-bottom_medium">
+                                    <lightning-dual-listbox
+                                        name="wlDefaultHiddenActions"
+                                        label="Built-In Actions"
+                                        source-label="Visible"
+                                        selected-label="Hidden"
+                                        options={wlDefaultActionOptions}
+                                        value={wlDefaultHiddenActions}
+                                        onchange={handleWlDefaultHiddenChange}>
+                                    </lightning-dual-listbox>
+                                </div>
+                            </div>
+
+                            <!-- RIGHT: Fields + Preview -->
+                            <div class="config-two-col__item">
+                                <div class="config-subsection-header">
+                                    <h3 class="config-subsection-title">Waitlist Card Fields</h3>
+                                    <p class="config-subsection-desc">Choose additional WaitlistParticipant fields to display on each card.</p>
+                                </div>
+
+                                <div class="slds-m-bottom_small">
+                                    <lightning-dual-listbox
+                                        name="waitlistFields"
+                                        label="Extra Fields"
+                                        source-label="Available Fields"
+                                        selected-label="Shown on Card"
+                                        options={wlFieldOptions}
+                                        value={waitlistFields}
+                                        onchange={handleWaitlistFieldsChange}>
+                                    </lightning-dual-listbox>
+                                </div>
+
+                                <div class="preview-card">
+                                    <div class="preview-card__header">
+                                        <lightning-icon icon-name="utility:preview" size="xx-small" alternative-text="Preview"></lightning-icon>
+                                        <span>Live Preview</span>
+                                    </div>
+                                    <div class="preview-card__body">
+                                        <div class="preview-layout">
+                                            <div class="preview-layout__main">
+                                                <p class="preview-name">Walk-In #001</p>
+                                                <p class="preview-sub">Waiting 12 min</p>
+                                                <template lwc:if={hasWlPreviewFields}>
+                                                    <dl class="preview-fields">
+                                                        <template for:each={wlPreviewFields} for:item="f">
+                                                            <div key={f.label} class="preview-field-row">
+                                                                <dt class="preview-field-label">{f.label}</dt>
+                                                                <dd class="preview-field-value">—</dd>
+                                                            </div>
+                                                        </template>
+                                                    </dl>
+                                                </template>
+                                                <template lwc:else>
+                                                    <p class="preview-hint">No extra fields selected yet.</p>
+                                                </template>
+                                            </div>
+                                            <div class="preview-layout__aside">
+                                                <lightning-badge label="Waiting"></lightning-badge>
+                                                <div class="preview-actions">
+                                                    <div class="preview-actions-dropdown">
+                                                        <span class="preview-btn preview-btn--neutral preview-btn--actions-trigger">Actions &#9660;</span>
+                                                        <div class="preview-dropdown preview-dropdown--actions">
+                                                            <p class="preview-dropdown-item preview-dropdown-item--checkin">Check In</p>
+                                                            <template for:each={wlCustomActionsPreview} for:item="a">
+                                                                <p key={a} class="preview-dropdown-item">{a}</p>
+                                                            </template>
+                                                            <template for:each={wlDefaultVisiblePreview} for:item="a">
+                                                                <p key={a.value} class="preview-dropdown-item">{a.label}</p>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </lightning-tab>
+
+                </lightning-tabset>
+
+                <!-- ── Save — outside tabs, always visible ────────────────── -->
+                <div class="config-save-row">
+                    <template lwc:if={isSaving}>
+                        <lightning-spinner alternative-text="Saving configuration..." size="small"></lightning-spinner>
+                        <span class="slds-text-color_weak slds-m-left_small">Saving&hellip;</span>
+                    </template>
+                    <template lwc:else>
+                        <lightning-button
+                            variant="brand"
+                            label="Save Configuration"
+                            onclick={handleSave}>
+                        </lightning-button>
+                    </template>
+                </div>
+
+                <template lwc:if={saveError}>
+                    <div class="slds-notify slds-notify_alert slds-alert_error slds-m-top_medium" role="alert">
+                        <span class="slds-assistive-text">Error</span>
+                        <p>{saveError}</p>
+                    </div>
+                </template>
+
+            </template>
+        </div>
+    </lightning-card>
+</template>

@@ -1,0 +1,23 @@
+<template>
+    <template lwc:if={isLoading}>
+        <lightning-spinner size="small" alternative-text="Loading actions"></lightning-spinner>
+    </template>
+
+    <template lwc:if={hasError}>
+        <p class="slds-text-color_error slds-text-body_small">{loadError}</p>
+    </template>
+
+    <template lwc:if={hasOptions}>
+        <lightning-dual-listbox
+            name="actionPicker"
+            label={fieldLabel}
+            variant="label-hidden"
+            source-label={sourceLabel}
+            selected-label={selectedLabel}
+            options={options}
+            value={selectedValues}
+            onchange={handleChange}>
+        </lightning-dual-listbox>
+    </template>
+
+</template>

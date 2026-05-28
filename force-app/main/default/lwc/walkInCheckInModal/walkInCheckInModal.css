@@ -1,0 +1,97 @@
+/* ── Modal sizing ──────────────────────────────────────────────────────────── */
+
+.walk-in-modal .slds-modal__container {
+    max-width: 44rem;
+}
+
+.slds-modal__content {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* ── Screen 1 ──────────────────────────────────────────────────────────────── */
+
+.walk-in-subtitle {
+    color: var(--slds-g-color-on-surface-1, #706e6b);
+}
+
+
+.walk-in-search-header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--slds-g-spacing-3, 0.75rem);
+}
+
+.walk-in-search-row {
+    flex: 1;
+}
+
+.walk-in-new-btn-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    padding-top: 1.5rem; /* align with input label offset */
+    white-space: nowrap;
+}
+
+.walk-in-new-badge--block {
+    display: block;
+    text-align: right;
+}
+
+.walk-in-table {
+    max-height: 12rem;
+    overflow-y: auto;
+}
+
+.walk-in-center {
+    display: flex;
+    justify-content: center;
+}
+
+.walk-in-new-badge {
+    color: var(--slds-g-color-success-2, #2e844a);
+}
+
+/* ── Screen 2 ──────────────────────────────────────────────────────────────── */
+
+.walk-in-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--slds-g-spacing-3, 0.75rem);
+}
+
+.walk-in-existing-banner {
+    display: flex;
+    align-items: center;
+    border-radius: var(--slds-g-radius-border-2, 0.25rem);
+}
+
+.walk-in-spinner-inline {
+    position: static;
+    display: inline-block;
+    margin-left: var(--slds-g-spacing-2, 0.5rem);
+}
+
+/* ── Screen 3 ──────────────────────────────────────────────────────────────── */
+
+.walk-in-success {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--slds-g-spacing-6, 1.5rem) 0;
+}
+
+.walk-in-success-svg {
+    width: 8rem;
+    height: 6rem;
+}
+
+/* ── Config subsection reuse ───────────────────────────────────────────────── */
+
+.config-subsection-title {
+    font-size: var(--slds-g-font-scale-2, 0.875rem);
+    font-weight: var(--slds-g-font-weight-7, 700);
+    color: var(--slds-g-color-on-surface-3, #181818);
+    margin: 0 0 var(--slds-g-spacing-1, 0.25rem);
+}

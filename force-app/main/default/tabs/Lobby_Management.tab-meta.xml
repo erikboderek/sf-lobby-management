@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Lobby Management — staff-facing appointment and waitlist dashboard</description>
+    <flexiPage>Lobby_Management_Page</flexiPage>
+    <label>Lobby Management Preview</label>
+    <motif>Custom85: Crowd</motif>
+</CustomTab>
