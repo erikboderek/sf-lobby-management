@@ -1,9 +1,11 @@
 # Salesforce Lobby Management
 
-<img width="1000" height="564" alt="image" src="https://github.com/user-attachments/assets/c30666b8-5cd0-43a7-8d01-8c7cde53ddef" />
+<img width="1438" height="1023" alt="image" src="https://github.com/user-attachments/assets/520d934b-e4b0-414d-9fc0-c93f2eabca3b" />
 
 
 I wanted more control over what I could do with lobby management in Salesforce Scheduler, so I built my own LWC with more control that doesn't require any code changes. 
+
+This was built for demonstrations and I cannot vouch its production ready, but it is pretty comprehensive. 
 
 <img width="2663" height="2544" alt="image" src="https://github.com/user-attachments/assets/77433794-92f1-426b-b90c-73d1a58831e7" />
 
@@ -30,7 +32,6 @@ I wanted more control over what I could do with lobby management in Salesforce S
 | Requirement | Notes |
 |-------------|-------|
 | **Salesforce Scheduler** | The component queries `ServiceTerritory`, `ServiceAppointment`, `AssignedResource`, `WorkType` — all Scheduler standard objects |
-| **Field Service (FSL) managed package** | Required if using resource assignment features. The FSL trigger `FSL.TR001_Service_BeforeInsert` fires on every `ServiceAppointment` insert. |
 | **Waitlist feature enabled** | `WaitlistParticipant` and `Waitlist` objects must be available. Enable via **Setup → Salesforce Scheduler Settings → Enable Drop In Appointments**. |
 | **Add "Checked In" status to Service Appointment** | In Object Manager, Service Appointment. Fields and Relationships -> Status -> in Status Picklist Values, click New. Label: Checked In, API Name: Checked_In, Status Category: Checked In |
 | **Add "No-Show" status to Service Appointment** | Similar to the last step, Label: No Show, API: No-Show, Status Category: Canceled |
@@ -46,7 +47,7 @@ The running user needs:
 - `FSL_Agent_Permissions` or `FSL_Dispatcher_Permissions` permission set (for SA read/write)
 - `LightningSchedulerStandardUser` permission set (for Waitlist objects)
 - Read access to `ServiceTerritory`, `ServiceAppointment`, `WaitlistParticipant`, `AssignedResource`, `ServiceResource`, `ServiceTerritoryMember`, `FlowDefinitionView`
-- Write access to `ServiceAppointment` (Status, ActualStartTime, SchedStartTime, SchedEndTime), `AssignedResource`, `WaitlistParticipant`
+- Write access to `ServiceAppointment`, `AssignedResource`, `WaitlistParticipant`
 
 A convenience script to assign permission sets is in [`scripts/apex/assign_permission_set.apex`](scripts/apex/assign_permission_set.apex).
 
@@ -114,6 +115,8 @@ All settings are stored in the `Lobby_Config__mdt` custom metadata type under th
 ---
 
 ### General
+
+This is a lightning app where all the configuration takes place. The settings can then be used when the LWC is placed on any page.
 
 In here, you can specify the refresh interval and the maximum number of appointments. Sorry, there's no paging capabilities at the moment.
 
@@ -267,42 +270,6 @@ All wait times are formatted by `_formatWaitMinutes()` in `lobbyPageContent.js`:
 
 ---
 
-## Data Model
-
-```
-ServiceTerritory
-    └── ServiceAppointment  (SchedStartTime, Status, ContactId, ParentRecordId)
-            └── AssignedResource  (ServiceResourceId)
-    └── Waitlist
-            └── WaitlistParticipant  (ParticipantIdentifier, Status)
-                    └── WaitlistServiceResource
-
-Lobby_Config__mdt  (Default record — all configuration)
-```
-
----
-
-## Development
-
-### Lint
-
-```bash
-npm run lint
-```
-
-### Jest unit tests
-
-```bash
-npm test
-```
-
-### Deploy a single component
-
-```bash
-sf project deploy start --source-dir force-app/main/default/lwc/lobbyPageContent --target-org lobby-org
-```
-
----
 
 ## Project Structure
 
